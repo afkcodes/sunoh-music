@@ -1,0 +1,91 @@
+{
+  // Editor
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "explicit"
+  },
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.rulers": [100],
+  "editor.wordWrap": "on",
+  "editor.bracketPairColorization.enabled": true,
+  "editor.guides.bracketPairs": true,
+
+  // TypeScript
+  "typescript.preferences.importModuleSpecifier": "relative",
+  "typescript.suggest.autoImports": true,
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "typescript.tsdk": "node_modules/typescript/lib",
+
+  // Files
+  "files.exclude": {
+    "**/.git": true,
+    "**/node_modules": true,
+    "**/android/build": true,
+    "**/android/app/build": true,
+    "**/ios/build": true,
+    "**/ios/Pods": true,
+    "**/.gradle": true
+  },
+  "files.associations": {
+    "*.tsx": "typescriptreact",
+    "*.ts": "typescript"
+  },
+
+  // Search
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/android/build": true,
+    "**/android/app/build": true,
+    "**/ios/build": true,
+    "**/ios/Pods": true,
+    "**/.gradle": true,
+    "**/coverage": true
+  },
+
+  // ESLint
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ],
+
+  // Prettier
+  "prettier.singleQuote": true,
+  "prettier.trailingComma": "es5",
+  "prettier.printWidth": 100,
+  "prettier.tabWidth": 2,
+
+  // React Native
+  "react-native-tools.projectRoot": "${workspaceFolder}",
+
+  // Copilot
+  "github.copilot.enable": {
+    "*": true,
+    "plaintext": true,
+    "markdown": true,
+    "typescript": true,
+    "typescriptreact": true
+  },
+
+  // Terminal
+  "terminal.integrated.defaultProfile.osx": "zsh",
+  "terminal.integrated.defaultProfile.linux": "zsh",
+
+  // Emmet
+  "emmet.includeLanguages": {
+    "typescriptreact": "html"
+  },
+
+  // File nesting
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.patterns": {
+    "*.ts": "${capture}.test.ts, ${capture}.spec.ts",
+    "*.tsx": "${capture}.test.tsx, ${capture}.spec.tsx, ${capture}.styles.ts",
+    "package.json": "package-lock.json, yarn.lock, .npmrc, .yarnrc, .prettierrc*, .eslintrc*, tsconfig*.json, babel.config.*, metro.config.*, jest.config.*"
+  },
+  "java.configuration.updateBuildConfiguration": "automatic"
+}
