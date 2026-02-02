@@ -4,6 +4,8 @@
  * Central export for all utility functions and hooks.
  */
 
+export { dataExtractor } from './dataExtractor';
+
 // Scaling system
 export {
     makeScalingStyles,
@@ -19,3 +21,4 @@ export type {
     ScalingFunctions, ScalingOnlyStyleFactory, ScalingStyleFactory
 } from './style.util';
 
+export * from './common';

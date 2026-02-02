@@ -5,5 +5,6 @@
  */
 
 export { Button } from './Button';
+export { SafeView } from './SafeView';
 export { BodyText, DisplayText, HeadlineText, LabelText, Text, TitleText } from './Text';
 

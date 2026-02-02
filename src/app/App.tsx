@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NavigationHandler } from 'navigation-react';
 import { NavigationStack, Scene } from 'navigation-react-native';
 import React from 'react';
@@ -9,6 +10,8 @@ import { ThemeProvider, useTheme } from '../theme/ThemeContext';
 import { rootNavigator } from './navigation/navigators';
 import { Routes } from './navigation/routes';
 import { Tabs } from './navigation/Tabs';
+
+const queryClient = new QueryClient();
 
 function AppContent() {
   const { isDark, colors } = useTheme();
@@ -35,9 +38,11 @@ export function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <ThemeProvider>
-          <AppContent />
-        </ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            <AppContent />
+          </ThemeProvider>
+        </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

@@ -1,27 +1,72 @@
 import React from 'react';
-import { View } from 'react-native';
-import { Text } from '../components/common/Text';
+import { ScrollView, View } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useTheme } from '../theme/ThemeContext';
 import { makeScalingStyles, useScalingStyles } from '../utils/style.util';
 
-const createStyles = makeScalingStyles((_, theme) => ({
+import { SafeView } from '../components/common';
+import LogoAnimation from '../components/common/Loader';
+import { HomeHeader } from '../components/home/HomeHeader';
+import { HomeSection } from '../components/home/HomeSection';
+import { useHomeData } from '../hooks/useHomeData';
+import { spacing, ThemeColors } from '../theme';
+
+const createStyles = makeScalingStyles((s, colors: ThemeColors) => ({
   container: {
+    flex: 1,
+    backgroundColor: colors.bgPage,
+  },
+  scrollContent: {
+    paddingBottom: s.mScale(spacing.lg),
+  },
+  center: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: theme.bgPage,
-  },
+  }
 }));
 
 const HomeScreen = () => {
     const { colors } = useTheme();
     const styles = useScalingStyles(createStyles, colors);
+    const { data: homeData, isLoading, error } = useHomeData();
+
+    if (isLoading) {
+        // return <HomeSkeleton />;
+        return (
+            <SafeView style={styles.container}>
+                <View style={styles.center}>
+                    <LogoAnimation/>
+                </View>
+            </SafeView>
+        );
+    }
+
+    if (error) {
+         console.error("Home Data Error", error);
+    }
 
     return (
-        <View style={styles.container}>
-            <Text variant="h1" color="primary">Home</Text>
-            <Text variant="body" color="secondary">Welcome to Sunoh</Text>
-        </View>
+        <SafeView style={styles.container}>
+            <Animated.View style={{ flex: 1 }} entering={FadeIn.duration(400)}>
+                <ScrollView 
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                >
+                    <HomeHeader />
+                    
+                    {homeData?.data?.slice(0, -1).map((section, index) => (
+                        <HomeSection 
+                            key={`${section.heading}-${index}`} 
+                            title={section.heading} 
+                            data={section.data}
+                            style={{ marginTop: index === 0 ? 0 : spacing.md }}
+                        />
+                    ))}
+
+                </ScrollView>
+            </Animated.View>
+        </SafeView>
     );
 };
 
