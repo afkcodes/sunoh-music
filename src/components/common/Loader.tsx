@@ -11,6 +11,7 @@ import Animated, {
   withTiming
 } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
+import { useTheme } from '../../theme/ThemeContext';
 
 // 1. Convert SVG Path to an Animated Component
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -26,6 +27,8 @@ interface LogoAnimationProps {
 }
 
 export default function LogoAnimation({ size = 80 }: LogoAnimationProps) {
+  const { colors } = useTheme();
+  
   // Shared values
   const drawProgress = useSharedValue(0);
   const fillOpacity = useSharedValue(0);
@@ -66,18 +69,14 @@ export default function LogoAnimation({ size = 80 }: LogoAnimationProps) {
       strokeWidth: 5,
     };
   });
-  
-  // Calculate height based on aspect ratio (378/350 = 1.08)
-
-  const color = "#7f8cff"; 
 
   return (
     <View style={styles.container}>
       <Svg width={size} height={size} viewBox="0 0 378 350" fill="none">
         <AnimatedPath
           d={PATH_DATA}
-          stroke={color}
-          fill={color} 
+          stroke={colors.primaryBase}
+          fill={colors.primaryBase} 
           strokeDasharray={[PATH_LENGTH, PATH_LENGTH]}
           animatedProps={animatedProps}
         />

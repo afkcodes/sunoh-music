@@ -62,8 +62,8 @@ export const lightColors: ThemeColors = {
   textTertiary: palette.surface[400],
   textInverse: '#FFFFFF',
 
-  primaryBase: palette.primary[600], // Shifted to 600 for consistency and better white extraction
-  primaryHover: palette.primary[700],
+  primaryBase: palette.primary[600], // #059669 - Emerald Green
+  primaryHover: palette.primary[700], // #047857
   primarySurface: palette.primary[50],
   primaryText: getAccessibleTextColor(palette.primary[600]),
 
@@ -94,10 +94,10 @@ export const darkColors: ThemeColors = {
   textTertiary: palette.surface[600],
   textInverse: palette.surface[950],
 
-  primaryBase: palette.primary[500],
-  primaryHover: palette.primary[700],
-  primarySurface: palette.primary[50],
-  primaryText: getAccessibleTextColor(palette.primary[600]),
+  primaryBase: palette.primary[500], // #10b981 - Brighter emerald for dark mode
+  primaryHover: palette.primary[600], // #059669
+  primarySurface: palette.primary[900],
+  primaryText: getAccessibleTextColor(palette.primary[500]),
 
   success: palette.success[600],
   successBg: palette.success[50],

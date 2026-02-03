@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, View, ViewStyle } from 'react-native';
-import { spacing } from '../../theme';
+import { fontNames, spacing } from '../../theme';
 import { useTheme } from '../../theme/ThemeContext';
 import { makeScalingStyles, useScalingStyles } from '../../utils/style.util';
 import { AltArrowRight } from './SolarIcons.generated';
@@ -41,25 +41,25 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
 
   return (
     <View style={[styles.container, style]}>
-      <Text variant="h2" color="primary">
+      <Text variant="h3" color="primary" style={{ fontFamily: fontNames.semibold }}>
         {title}
       </Text>
-      
+
       {action && (
         <View>
-            <Pressable 
-                onPress={onActionPress} 
-                style={({ pressed }) => [
-                    styles.actionButton,
-                    { opacity: pressed ? 0.6 : 1 }
-                ]}
-            >
+          <Pressable
+            onPress={onActionPress}
+            style={({ pressed }) => [
+              styles.actionButton,
+              { opacity: pressed ? 0.6 : 1 }
+            ]}
+          >
             <Text variant="caption" color="secondary">
-                {action}
+              {action}
             </Text>
             {/* Tiny arrow */}
-            <AltArrowRight size={12} color={colors.textSecondary} /> 
-            </Pressable>
+            <AltArrowRight size={12} color={colors.textSecondary} />
+          </Pressable>
         </View>
       )}
     </View>

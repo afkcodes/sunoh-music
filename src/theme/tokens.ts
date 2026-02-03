@@ -7,18 +7,19 @@
 
 // --- Color Palette ---
 export const palette = {
+  // Coral Sunset (Unique Music App Brand)
   primary: {
-    50: '#eef0ff',
-    100: '#e0e4ff',
-    200: '#c7cdff',
-    300: '#a5b0ff',
-    400: '#7f8cff',
-    500: '#5b6ef5',
-    600: '#4a5bd9',
-    700: '#3d49b8',
-    800: '#343d95',
-    900: '#2f3678',
-    950: '#1e2147',
+    50: '#fff1f2',
+    100: '#ffe4e6',
+    200: '#fecdd3',
+    300: '#fda4af',
+    400: '#fb7185',
+    500: '#f43f5e',
+    600: '#e11d48',
+    700: '#be123c',
+    800: '#9f1239',
+    900: '#881337',
+    950: '#4c0519',
   },
   // Vibrant Emerald Green (Apex/Tailwind-aligned)
   success: {

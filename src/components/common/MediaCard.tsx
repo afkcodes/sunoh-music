@@ -51,7 +51,7 @@ export const MediaCard: React.FC<MediaCardProps> = memo(({
   title,
   subtitle,
   imageUrl,
-  size = 140, 
+  size = 140,
   variant = 'default',
   onPress,
   style,
@@ -60,9 +60,15 @@ export const MediaCard: React.FC<MediaCardProps> = memo(({
   const styles = useScalingStyles(createStyles, colors);
   const scale = useSharedValue(1);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
+  const animatedStyle = useAnimatedStyle(() => {
+    'worklet';
+    if (scale.value === 1) {
+      return {};
+    }
+    return {
+      transform: [{ scale: scale.value }],
+    };
+  });
 
   const handlePressIn = () => {
     scale.value = withSpring(0.98, springs.stiff);
@@ -83,60 +89,60 @@ export const MediaCard: React.FC<MediaCardProps> = memo(({
         style={{ flex: 1 }}
       >
         <Animated.View style={[animatedStyle]}>
-            {/* Artwork */}
-            {/* Artwork Wrapper to enforce layout reservation */}
-            <View style={{ width: size, height: size }}>
-                <SquircleView 
-                    style={[
-                        styles.imageContainer, 
-                        { 
-                            backgroundColor: colors.bgSurfaceHover, 
-                            flex: 1, // Fill the wrapper
-                            width: '100%', 
-                            height: '100%',
-                        },
-                        isCircle ? { borderRadius: 9999 } : {}
-                    ]} 
-                    cornerSmoothing={isCircle ? 0 : 1}
-                >
-                {imageUrl ? (
-                    <TurboImage
-                        source={{ uri: imageUrl }}
-                        style={styles.image}
-                        resizeMode="cover"
-                    />
-                ) : (
-                    <MusicNote size={32} color={colors.textSecondary} />
-                )}
-                </SquircleView>
-            </View>
+          {/* Artwork */}
+          {/* Artwork Wrapper to enforce layout reservation */}
+          <View style={{ width: size, height: size }}>
+            <SquircleView
+              style={[
+                styles.imageContainer,
+                {
+                  backgroundColor: colors.bgSurfaceHover,
+                  flex: 1, // Fill the wrapper
+                  width: '100%',
+                  height: '100%',
+                },
+                isCircle ? { borderRadius: 9999 } : {}
+              ]}
+              cornerSmoothing={isCircle ? 0 : 1}
+            >
+              {imageUrl ? (
+                <TurboImage
+                  source={{ uri: imageUrl }}
+                  style={styles.image}
+                  resizeMode="cover"
+                />
+              ) : (
+                <MusicNote size={32} color={colors.textSecondary} />
+              )}
+            </SquircleView>
+          </View>
 
-            {/* Meta */}
-            <View style={[
-                styles.textContainer, 
-                { 
-                    marginTop: 12,
-                    alignItems: isCircle ? 'center' : 'flex-start' 
-                }
-            ]}>
-                <Text 
-                    variant="body" 
-                    style={{ fontWeight: '600', textAlign: isCircle ? 'center' : 'left' }} 
-                    numberOfLines={1}
-                >
-                    {title}
-                </Text>
-                {subtitle && (
-                    <Text 
-                        variant="caption" 
-                        color="secondary" 
-                        style={{ textAlign: isCircle ? 'center' : 'left' }}
-                        numberOfLines={1}
-                    >
-                        {subtitle}
-                    </Text>
-                )}
-            </View>
+          {/* Meta */}
+          <View style={[
+            styles.textContainer,
+            {
+              marginTop: 12,
+              alignItems: isCircle ? 'center' : 'flex-start'
+            }
+          ]}>
+            <Text
+              variant="body"
+              style={{ fontWeight: '600', textAlign: isCircle ? 'center' : 'left' }}
+              numberOfLines={1}
+            >
+              {title}
+            </Text>
+            {subtitle && (
+              <Text
+                variant="caption"
+                color="secondary"
+                style={{ textAlign: isCircle ? 'center' : 'left' }}
+                numberOfLines={1}
+              >
+                {subtitle}
+              </Text>
+            )}
+          </View>
         </Animated.View>
       </Pressable>
     </Animated.View>

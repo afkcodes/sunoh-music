@@ -10,6 +10,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@legendapp/list": "^2.0.19",
     "@shopify/flash-list": "^2.2.1",
     "@tanstack/react-query": "^5.90.20",
     "navigation": "^6.3.1",

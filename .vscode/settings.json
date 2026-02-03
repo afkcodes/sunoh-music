@@ -87,5 +87,8 @@
     "*.tsx": "${capture}.test.tsx, ${capture}.spec.tsx, ${capture}.styles.ts",
     "package.json": "package-lock.json, yarn.lock, .npmrc, .yarnrc, .prettierrc*, .eslintrc*, tsconfig*.json, babel.config.*, metro.config.*, jest.config.*"
   },
-  "java.configuration.updateBuildConfiguration": "automatic"
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "vscode.typescript-language-features"
+  }
 }

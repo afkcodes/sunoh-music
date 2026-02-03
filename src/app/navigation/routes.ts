@@ -8,6 +8,8 @@ export const Routes = {
   
   // Home Tab
   Home: 'home',
+  Album: 'album',
+  SectionDetail: 'sectionDetail',
   Details: 'details',
   
   // Library Tab

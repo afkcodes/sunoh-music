@@ -16,6 +16,8 @@ export const rootNavigator = new StateNavigator([
  */
 export const homeNavigator = new StateNavigator([
   { key: Routes.Home },
+  { key: Routes.Album, trackCrumbTrail: true },
+  { key: Routes.SectionDetail, trackCrumbTrail: true },
   { key: Routes.Details, trackCrumbTrail: true },
 ]);
 
