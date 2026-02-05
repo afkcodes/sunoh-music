@@ -1,13 +1,21 @@
 /**
  * Navigation type definitions
- * 
+ *
  * Provides type safety for navigation throughout the app.
  */
 
 // import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 // import type { NavigatorScreenParams } from '@react-navigation/native';
 // import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { Album, Artist, Playlist, Podcast, PodcastEpisode, RadioStation, Track } from './audio.types';
+import type {
+  Album,
+  Artist,
+  Playlist,
+  Podcast,
+  PodcastEpisode,
+  RadioStation,
+  Track,
+} from './audio.types';
 
 // Root Stack
 export type RootStackParamList = {
@@ -16,31 +24,33 @@ export type RootStackParamList = {
   Queue: undefined;
   Lyrics: { trackId: string };
   SleepTimer: undefined;
-  
+
   // Detail screens
-  AlbumDetail: { album: Album } | { albumId: string };
-  ArtistDetail: { artist: Artist } | { artistId: string };
-  PlaylistDetail: { playlist: Playlist } | { playlistId: string };
+  AlbumDetail: { album: Album; provider?: string } | { albumId: string; provider?: string };
+  ArtistDetail: { artist: Artist; provider?: string } | { artistId: string; provider?: string };
+  PlaylistDetail:
+    | { playlist: Playlist; provider?: string }
+    | { playlistId: string; provider?: string };
   TrackDetail: { track: Track } | { trackId: string };
-  
+
   // Radio
   RadioPlayer: { station: RadioStation };
   RadioBrowser: { genre?: string; country?: string };
-  
+
   // Podcast
   PodcastDetail: { podcast: Podcast } | { podcastId: string };
   EpisodeDetail: { episode: PodcastEpisode };
-  
+
   // Features
   Equalizer: undefined;
   AIPlaylistGenerator: { seedTrack?: Track; seedArtist?: Artist; mood?: string };
-  
+
   // Settings
   Settings: undefined;
   AudioSettings: undefined;
   DownloadSettings: undefined;
   AppearanceSettings: undefined;
-  
+
   // Auth (if needed)
   Login: undefined;
   Register: undefined;
@@ -88,10 +98,10 @@ export type ProfileStackParamList = {
 };
 
 // Screen props types
-// export type RootStackScreenProps<T extends keyof RootStackParamList> = 
+// export type RootStackScreenProps<T extends keyof RootStackParamList> =
 //   NativeStackScreenProps<RootStackParamList, T>;
 
-// export type MainTabScreenProps<T extends keyof MainTabParamList> = 
+// export type MainTabScreenProps<T extends keyof MainTabParamList> =
 //   BottomTabScreenProps<MainTabParamList, T>;
 
 // Utility type for useNavigation hook

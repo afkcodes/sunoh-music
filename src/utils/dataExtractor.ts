@@ -31,6 +31,7 @@ export function dataExtractor<T>(
   // If keys is a string, convert it to an array
   const keyPaths = Array.isArray(keys) ? keys : [keys];
 
+
   // Function to extract data for a single key path
   const extractSingle = (keyPath: string): T | undefined => {
     if (obj == null || typeof obj !== 'object') {

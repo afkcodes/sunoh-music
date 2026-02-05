@@ -9,6 +9,7 @@ import { Routes } from './routes';
 import { AlbumScreen } from '../../screens/AlbumScreen';
 import HomeScreen from '../../screens/HomeScreen';
 import LibraryScreen from '../../screens/LibraryScreen';
+import { PlaylistScreen } from '../../screens/PlaylistScreen';
 import SearchScreen from '../../screens/SearchScreen';
 import { SectionDetailScreen } from '../../screens/SectionDetailScreen';
 
@@ -58,6 +59,9 @@ export const Tabs = () => {
             <Scene stateKey={Routes.SectionDetail}>
               <SectionDetailScreen />
             </Scene>
+            <Scene stateKey={Routes.Playlist}>
+              <PlaylistScreen />
+            </Scene>
             <Scene stateKey={Routes.Details}>
               {/* Placeholder for Details if needed later */}
               <LibraryScreen />
@@ -85,6 +89,9 @@ export const Tabs = () => {
             <Scene stateKey={Routes.Search}>
               <SearchScreen />
             </Scene>
+            <Scene stateKey={Routes.Playlist}>
+              <PlaylistScreen />
+            </Scene>
           </NavigationStack>
         </NavigationHandler>
       </TabBarItem>
@@ -110,7 +117,7 @@ export const Tabs = () => {
               <LibraryScreen />
             </Scene>
             <Scene stateKey={Routes.Playlist}>
-              <LibraryScreen />
+              <PlaylistScreen />
             </Scene>
           </NavigationStack>
         </NavigationHandler>

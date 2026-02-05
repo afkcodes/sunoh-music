@@ -1,10 +1,10 @@
-import { SaavnArtist, SaavnImage } from './saavn';
+import { BaseSaavnResponse, SaavnArtist, SaavnImage } from './saavn';
 
 export interface Song {
   id: string;
   title: string;
   subtitle: string;
-  images: SaavnImage[];
+  image: SaavnImage[];
   language: string;
   year: string;
   type: 'song';
@@ -33,25 +33,21 @@ export interface AlbumDetails {
   title: string;
   subtitle: string;
   description: string;
-  type: 'album';
+  type: 'album' | 'playlist';
   token: string;
-  images: SaavnImage[];
+  image: SaavnImage[];
   language: string;
   year: string;
   listCount: string;
   listType: string;
-  list: Song[];
+  list?: Song[];
+  songs?: Song[];
   isExplicit: string;
   copyright: string;
   songCount: string;
   artists: SaavnArtist[];
 }
 
-export interface AlbumResponse {
-  code: number;
-  message: string;
-  data: {
-    album: AlbumDetails;
-    sections: any[];
-  };
+export interface AlbumResponse extends BaseSaavnResponse {
+  data: any; // Flexible to handle inconsistent API structures (flat vs nested in album/playlist keys)
 }

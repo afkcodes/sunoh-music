@@ -3,12 +3,12 @@ import { ScrollView, StyleProp, View, ViewStyle } from 'react-native';
 
 import { useNavigationEvent } from 'navigation-react';
 import { Routes } from '../../app/navigation/routes';
-import { dataConfigs } from '../../config/dataConfigs';
+import { useMediaNavigation } from '../../hooks/useMediaNavigation';
+import { sectionDataStore } from '../../services/stores/SectionDataStore';
 import { spacing, ThemeColors } from '../../theme';
 import { useTheme } from '../../theme/ThemeContext';
-import { SaavnImage, SaavnItem } from '../../types/saavn';
-import { capitalizeFirstLetter } from '../../utils';
-import { dataExtractor, NestedObject } from '../../utils/dataExtractor';
+import { SaavnItem } from '../../types/saavn';
+import { getMediaItemProps } from '../../utils/media';
 import { makeScalingStyles, useScaling, useScalingStyles } from '../../utils/style.util';
 import { MediaCard } from '../common/MediaCard';
 import { SectionHeader } from '../common/SectionHeader';
@@ -16,6 +16,7 @@ import { SectionHeader } from '../common/SectionHeader';
 interface HomeSectionProps {
   title: string;
   data: SaavnItem[];
+  provider?: 'gaana' | 'saavn' | 'spotify' | 'unified';
   style?: StyleProp<ViewStyle>;
 }
 
@@ -28,59 +29,43 @@ const createStyles = makeScalingStyles((s, _colors: ThemeColors) => ({
   },
 }));
 
-export const HomeSection: React.FC<HomeSectionProps> = React.memo(({ title, data, style }) => {
+export const HomeSection: React.FC<HomeSectionProps> = React.memo(({ title, data, provider: sectionProvider, style }) => {
   const { colors } = useTheme();
   const s = useScaling();
   const styles = useScalingStyles(createStyles, colors);
+  const { navigateToItem } = useMediaNavigation();
   const { stateNavigator } = useNavigationEvent();
 
   const limitedData = useMemo(() => data.slice(0, 10), [data]);
 
   const renderInnerItem = useCallback(({ item }: { item: SaavnItem }) => {
-
-    const itemType = (item.type || 'album');
-    const isConfigType = (key: string): key is keyof typeof dataConfigs => key in dataConfigs;
-    const config = isConfigType(itemType) ? dataConfigs[itemType] : dataConfigs.album;
-
-    const title = dataExtractor<string>(item as unknown as NestedObject, config.title) || '';
-
-    const subtitleRaw = dataExtractor<string>(item as unknown as NestedObject, config.subtitle) || '';
-    const subtitle = capitalizeFirstLetter(subtitleRaw);
-
-    // Image logic
-    const imageUrl = dataExtractor<string>(item as unknown as NestedObject, config.image, '.', (images: any[]) => {
-      const highQuality = images.find((img: SaavnImage) => img.quality === '500x500');
-      if (highQuality) return highQuality.link;
-      return images[images.length - 1]?.link || '';
-    }) || '';
-    const isCircle = ['radio_station'].includes(itemType);
-
-    const handlePress = () => {
-      if (itemType === 'album') {
-        stateNavigator.navigate(Routes.Album, { albumId: item.token });
-      }
-    };
+    const props = getMediaItemProps(item, sectionProvider);
 
     return (
       <MediaCard
-        title={title}
-        subtitle={subtitle}
-        imageUrl={imageUrl}
+        title={props.title}
+        subtitle={props.subtitle}
+        imageUrl={props.imageUrl}
         style={{ marginRight: 0 }}
-        variant={isCircle ? 'circle' : 'default'}
-        onPress={handlePress}
+        variant={props.isCircle ? 'circle' : 'default'}
+        onPress={() => navigateToItem(item, sectionProvider)}
       />
     );
-  }, [stateNavigator]);
+  }, [sectionProvider, navigateToItem]);
 
 
 
   const handleMore = useCallback(() => {
+    // Generate a unique ID for this navigation event to store data
+    const sectionId = `${title}-${Date.now()}`;
+    sectionDataStore.setData(sectionId, data);
+
     stateNavigator.navigate(Routes.SectionDetail, {
       title,
-      data, // Pass full data array
+      sectionId,
+      provider: sectionProvider,
     });
-  }, [stateNavigator, title, data]);
+  }, [stateNavigator, title, data, sectionProvider]);
 
   return (
     <View style={style}>
@@ -90,6 +75,9 @@ export const HomeSection: React.FC<HomeSectionProps> = React.memo(({ title, data
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.sectionList}
+          renderToHardwareTextureAndroid
+          removeClippedSubviews
+          scrollEventThrottle={64}
         >
           {limitedData.map((item, index) => (
             <React.Fragment key={item.id}>

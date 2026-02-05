@@ -1,0 +1,154 @@
+{
+  "project": "Sunoh API",
+  "version": "1.0.1",
+  "baseUrl": "https://api.sunoh.online",
+  "endpoints": {
+    "General": [
+      {
+        "path": "/",
+        "method": "GET",
+        "description": "Health check for the Sunoh API",
+        "response": {
+          "status": "success",
+          "message": "Sunoh API is running",
+          "version": "1.0.0"
+        }
+      },
+      {
+        "path": "/proxy",
+        "method": "GET",
+        "description": "Proxy image to bypass CORS or referer checks",
+        "params": {
+          "url": "Encoded image URL"
+        }
+      }
+    ],
+    "MusicDiscovery": [
+      {
+        "path": "/music/home",
+        "method": "GET",
+        "description": "Unified home screen with interleaved data from Saavn and Gaana",
+        "query": {
+          "provider": "[optional] 'gaana' or 'saavn'. Defaults to unified/all.",
+          "lang": "Comma separated languages (e.g., 'hindi,english')",
+          "languages": "Alias for lang"
+        }
+      },
+      {
+        "path": "/music/search",
+        "method": "GET",
+        "description": "Search for songs, albums, and playlists",
+        "query": {
+          "query": "The search term",
+          "provider": "[optional] 'gaana' or 'saavn'. Defaults to saavn.",
+          "lang": "Comma separated languages"
+        }
+      },
+      {
+        "path": "/music/album/:albumId",
+        "method": "GET",
+        "description": "Get album details and songs",
+        "query": {
+          "provider": "'gaana' or 'saavn'"
+        }
+      },
+      {
+        "path": "/music/song/:songId",
+        "method": "GET",
+        "description": "Get song details",
+        "query": {
+          "provider": "'gaana' or 'saavn'"
+        }
+      },
+      {
+        "path": "/music/song/:songId/stream",
+        "method": "GET",
+        "description": "Get decrypted stream URLs (Gaana specific requirement)",
+        "query": {
+          "provider": "gaana"
+        }
+      },
+      {
+        "path": "/music/playlist/:playlistId",
+        "method": "GET",
+        "description": "Get playlist details",
+        "query": {
+          "provider": "'gaana', 'saavn', or 'spotify'"
+        }
+      },
+      {
+        "path": "/music/artist/:artistId",
+        "method": "GET",
+        "description": "Get artist details, top tracks, and albums",
+        "query": {
+          "provider": "'gaana' or 'saavn'"
+        }
+      },
+      {
+        "path": "/music/radio/:radioId",
+        "method": "GET",
+        "description": "Get list of songs for a radio station/channel",
+        "params": {
+          "radioId": "Numeric ID (Gaana)"
+        },
+        "query": {
+          "provider": "gaana"
+        }
+      },
+      {
+        "path": "/music/collection/:seokey",
+        "method": "GET",
+        "description": "Get Gaana-specific collection details",
+        "query": {
+          "provider": "gaana"
+        }
+      },
+      {
+        "path": "/music/album-list",
+        "method": "GET",
+        "description": "Get a list of trending albums (Gaana)",
+        "query": {
+          "provider": "gaana",
+          "language": "Target language",
+          "page": "Page number"
+        }
+      }
+    ],
+    "Lyrics": [
+      {
+        "path": "/lyrics/:songName",
+        "method": "GET",
+        "description": "Fetch sync/LRC lyrics from Apple Music",
+        "query": {
+          "format": "'lrc' or 'ttml'",
+          "storefront": "Country code (e.g., 'in', 'us')"
+        }
+      }
+    ]
+  },
+  "providers": {
+    "gaana": {
+      "status": "Enhanced",
+      "features": [
+        "Stream Decryption",
+        "Rich Artist Profiles",
+        "Featured Collections",
+        "Radio Stations (Numeric IDs)"
+      ]
+    },
+    "saavn": {
+      "status": "Stable",
+      "features": [
+        "Native Streaming URLs",
+        "Deep Catalog",
+        "Smart Recommendations"
+      ]
+    },
+    "spotify": {
+      "status": "Limited",
+      "features": [
+        "Playlist Fetching Only"
+      ]
+    }
+  }
+}

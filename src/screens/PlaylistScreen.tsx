@@ -27,7 +27,7 @@ import {
 } from '../components/common/SolarIcons.generated';
 import { Text } from '../components/common/Text';
 import { HomeSection } from '../components/home/HomeSection';
-import { useAlbumData } from '../hooks/useAlbumData';
+import { usePlaylistData } from '../hooks/usePlaylistData';
 import { borderRadius, fontNames, spacing, ThemeColors } from '../theme';
 import { useTheme } from '../theme/ThemeContext';
 import { Song } from '../types/album';
@@ -180,18 +180,18 @@ const createStyles = makeScalingStyles((s, colors: ThemeColors) => ({
 // ============================================================================
 
 /**
- * Memoized Album Header Component
- * Only re-renders when album data actually changes
+ * Memoized Playlist Header Component
+ * Only re-renders when playlist data actually changes
  */
-const AlbumHeader = React.memo<{
-  album: any;
+const PlaylistHeader = React.memo<{
+  playlist: any;
   imageUrl: string;
   artworkAnimatedStyle: any;
   colors: ThemeColors;
   styles: any;
   handlePlayAll: () => void;
 }>(
-  ({ album, imageUrl, artworkAnimatedStyle, colors, styles, handlePlayAll }) => {
+  ({ playlist, imageUrl, artworkAnimatedStyle, colors, styles, handlePlayAll }) => {
     return (
       <View style={styles.header}>
         {/* Hero Background */}
@@ -212,7 +212,7 @@ const AlbumHeader = React.memo<{
 
         {/* Hero Content */}
         <View style={styles.heroContent}>
-          {/* Album Artwork */}
+          {/* Playlist Artwork */}
           <Animated.View style={[styles.artworkContainer, artworkAnimatedStyle]}>
             <TurboImage
               source={{ uri: imageUrl }}
@@ -222,26 +222,26 @@ const AlbumHeader = React.memo<{
             />
           </Animated.View>
 
-          {/* Album Metadata */}
+          {/* Playlist Metadata */}
           <View style={styles.metadata}>
             <Text variant="h1" center numberOfLines={2} style={{ fontFamily: fontNames.bold }}>
-              {decodeHtmlEntities(album?.title || '')}
+              {decodeHtmlEntities(playlist?.title || '')}
             </Text>
             <Text variant="body" style={{ textAlign: 'center' }} color="secondary">
-              {decodeHtmlEntities(album?.subtitle || '')}
+              {decodeHtmlEntities(playlist?.subtitle || '')}
             </Text>
             <View style={styles.metaRow}>
-              {(album?.year || album?.releaseDate) && (
+              {(playlist?.year || playlist?.releaseDate) && (
                 <>
                   <Text variant="caption" color="secondary">
-                    {decodeHtmlEntities(album?.year || album?.releaseDate || '')}
+                    {decodeHtmlEntities(playlist?.year || playlist?.releaseDate || '')}
                   </Text>
                   <View style={styles.dot} />
                 </>
               )}
               <Text variant="caption" color="secondary">
-                {album?.songCount || album?.listCount || (album?.songs?.length || 0).toString()}{' '}
-                {parseInt(album?.songCount || album?.listCount || (album?.songs?.length || 0).toString()) === 1 ? 'Song' : 'Songs'}
+                {(playlist?.songs?.length || 0).toString()}{' '}
+                {parseInt((playlist?.songs?.length || 0).toString()) === 1 ? 'Song' : 'Songs'}
               </Text>
             </View>
           </View>
@@ -279,37 +279,36 @@ const AlbumHeader = React.memo<{
   (prevProps, nextProps) => {
     // Custom comparison - only re-render if these change
     return (
-      prevProps.album?.id === nextProps.album?.id &&
+      prevProps.playlist?.id === nextProps.playlist?.id &&
       prevProps.imageUrl === nextProps.imageUrl &&
       prevProps.colors === nextProps.colors
     );
   }
 );
 
-AlbumHeader.displayName = 'AlbumHeader';
-
-// SectionsList removed (merged into main list)
+PlaylistHeader.displayName = 'PlaylistHeader';
 
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
-export const AlbumScreen: React.FC = () => {
+export const PlaylistScreen: React.FC = () => {
   const { colors } = useTheme();
   const styles = useScalingStyles(createStyles, colors);
   const { data, stateNavigator } = useNavigationEvent();
-  const albumId = data.albumId as string;
+  const playlistId = data.playlistId as string;
   const provider = (data.provider as any) || 'saavn';
-  const { data: albumData, isLoading, error } = useAlbumData(albumId, provider);
+  const { data: playlistData, isLoading, error } = usePlaylistData(playlistId, provider);
   const s = useScaling();
 
-  const album = albumData?.data?.album || albumData?.data?.playlist || albumData?.data;
-  const sections = albumData?.data?.sections || album?.sections || [];
+  const finalPlaylist = playlistData?.data?.playlist || playlistData?.data?.album || playlistData?.data;
+  const sections = playlistData?.data?.sections || finalPlaylist?.sections || [];
+
 
   // Use standardized media props
   const mediaProps = useMemo(
-    () => (album ? getMediaItemProps(album, provider) : null),
-    [album, provider]
+    () => (finalPlaylist ? getMediaItemProps(finalPlaylist, provider) : null),
+    [finalPlaylist, provider]
   );
   const imageUrl = mediaProps?.imageUrl || '';
 
@@ -395,8 +394,6 @@ export const AlbumScreen: React.FC = () => {
     return { opacity, transform: [{ translateY }] };
   }, []);
 
-  // 3. Icon color cross-fade
-
   // Theme/Dark icon fades IN as we scroll UP past threshold
   const iconThemeAnimatedStyle = useAnimatedStyle(() => {
     'worklet';
@@ -434,13 +431,13 @@ export const AlbumScreen: React.FC = () => {
   type ListItem = { type: 'song'; data: Song; id: string };
 
   const listData = useMemo(() => {
-    const songs = album?.songs || album?.list || [];
+    const songs = finalPlaylist?.songs || finalPlaylist?.list || [];
     return songs.map((song: Song) => ({
       type: 'song' as const,
       data: song,
       id: song.id,
     }));
-  }, [album?.songs, album?.list]);
+  }, [finalPlaylist?.songs, finalPlaylist?.list]);
 
   // ============================================================================
   // RENDER FUNCTIONS
@@ -460,8 +457,8 @@ export const AlbumScreen: React.FC = () => {
   // Memoized header
   const listHeader = useMemo(
     () => (
-      <AlbumHeader
-        album={album}
+      <PlaylistHeader
+        playlist={finalPlaylist}
         imageUrl={imageUrl}
         artworkAnimatedStyle={artworkAnimatedStyle}
         colors={colors}
@@ -469,7 +466,7 @@ export const AlbumScreen: React.FC = () => {
         handlePlayAll={handlePlayAll}
       />
     ),
-    [album, imageUrl, artworkAnimatedStyle, colors, styles, handlePlayAll]
+    [finalPlaylist, imageUrl, artworkAnimatedStyle, colors, styles, handlePlayAll]
   );
 
   // Memoized footer
@@ -487,7 +484,9 @@ export const AlbumScreen: React.FC = () => {
   }, [sections, styles, s]);
 
   // ============================================================================
-  // LOADING &  /* Restore insets */
+  // LOADING
+  // ============================================================================
+
   const insets = useSafeAreaInsets();
 
   if (isLoading) {
@@ -500,12 +499,12 @@ export const AlbumScreen: React.FC = () => {
     );
   }
 
-  if (error || !albumData?.data) {
+  if (error || !playlistData?.data) {
     return (
       <SafeView style={styles.container} applyTopInset={false}>
         <View style={styles.loader}>
           <Text variant="body" center color="secondary">
-            Failed to load album
+            Failed to load playlist
           </Text>
         </View>
       </SafeView>
@@ -560,7 +559,7 @@ export const AlbumScreen: React.FC = () => {
         {/* 3. Title (Fades In) */}
         <Animated.View style={[{ flex: 1 }, headerTitleAnimatedStyle]}>
           <Text variant="body" style={{ fontWeight: '600', textAlign: 'center' }} numberOfLines={1}>
-            {decodeHtmlEntities(album?.title || '')}
+            {decodeHtmlEntities(finalPlaylist?.title || '')}
           </Text>
         </Animated.View>
 

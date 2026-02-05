@@ -15,7 +15,7 @@ export interface SaavnItem {
   id: string;
   title: string;
   subTitle: string;
-  images: SaavnImage[] | string; // Sometimes string (playlist), sometimes array (song/album)
+  image: SaavnImage[] | string; // Sometimes string (playlist), sometimes array (song/album)
   type: 'song' | 'album' | 'playlist' | 'radio_station' | 'channel' | 'artist';
   token: string;
   playCount?: string;
@@ -26,16 +26,23 @@ export interface SaavnItem {
   // For playlists/charts
   editorFirstName?: string;
   followers?: string;
+  provider?: 'gaana' | 'saavn' | 'spotify';
 }
 
 export interface SaavnSection {
   heading: string;
   data: SaavnItem[];
   source?: string;
+  provider?: 'gaana' | 'saavn' | 'spotify';
 }
 
-export interface SaavnResponse {
-  code: number;
+export interface BaseSaavnResponse {
+  status: string;
   message: string;
+  source: string;
+  error: any;
+}
+
+export interface SaavnResponse extends BaseSaavnResponse {
   data: SaavnSection[];
 }
