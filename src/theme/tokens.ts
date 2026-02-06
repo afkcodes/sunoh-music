@@ -90,17 +90,17 @@ export const palette = {
 
 // --- Typography ---
 
-export const fonts = {
-  display: 'Gilroy',   // Generic family (iOS/Web)
-  body: 'Gilroy',   // Generic family (iOS/Web)
-} as const;
-
 // Android-specific font file mappings
 export const fontNames = {
   regular: 'Gilroy-Regular',
   medium: 'Gilroy-Medium',
   semibold: 'Gilroy-Semibold', // Matches filename
   bold: 'Gilroy-Bold',
+} as const;
+
+export const fonts = {
+  display: fontNames.bold,
+  body: fontNames.regular,
 } as const;
 
 export const fontSizes = {

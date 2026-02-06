@@ -66,6 +66,7 @@ export const useDesignTokens = () => {
       lineHeights,
       borderRadius,
       fonts: tokens.fonts,
+      fontNames: tokens.fontNames,
 
       // Text spacing for accessibility
       textSpacing: {

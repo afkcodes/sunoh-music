@@ -19,8 +19,6 @@ const createStyles = makeScalingStyles((s, _) => ({
     justifyContent: 'space-between',
     alignItems: 'baseline', // Align text baseline for cleaner look
     paddingHorizontal: s.mScale(spacing.lg),
-    marginBottom: s.mScale(spacing.md),
-    marginTop: s.mScale(spacing.lg),
   },
   actionButton: {
     flexDirection: 'row',

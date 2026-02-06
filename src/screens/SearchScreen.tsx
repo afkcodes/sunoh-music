@@ -1,6 +1,7 @@
-import React, { memo, useMemo, useState } from 'react';
+import { useNavigationEvent } from 'navigation-react';
+import React, { memo, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
+  Pressable,
   ScrollView,
   TextInput,
   TouchableOpacity,
@@ -11,16 +12,20 @@ import LinearGradient from 'react-native-linear-gradient';
 import TurboImage from 'react-native-turbo-image';
 import { searchNavigator } from '../app/navigation/navigators';
 import { Routes } from '../app/navigation/routes';
+import LogoLoader from '../components/common/Loader';
 import { SafeView } from '../components/common/SafeView';
 import { SectionHeader } from '../components/common/SectionHeader';
-import { Magnifer } from '../components/common/SolarIcons.generated';
+import { CloseCircle, Magnifer } from '../components/common/SolarIcons.generated';
 import { Text } from '../components/common/Text';
 import { HomeSection } from '../components/home/HomeSection';
+import { useMediaNavigation } from '../hooks/useMediaNavigation';
 import { useOccasions } from '../hooks/useOccasions';
 import { useSearch } from '../hooks/useSearch';
 import { useTrendingSearch } from '../hooks/useTrendingSearch';
+import { sectionDataStore } from '../services/stores/SectionDataStore';
 import { useTheme } from '../theme/ThemeContext';
 import { Occasion, SaavnItem, SaavnSection } from '../types/saavn';
+import { decodeHtmlEntities } from '../utils/htmlDecode';
 import { getMediaItemProps } from '../utils/media';
 import { makeScalingStyles, useScalingStyles } from '../utils/style.util';
 
@@ -30,7 +35,7 @@ const createStyles = makeScalingStyles((s, theme) => {
   const horizontalPadding = theme.spacing[4] * 2;
   const gap = s.mScale(GAP);
   // Subtract a small buffer (1px) and floor to prevent rounding issues in flex-wrap
-  const itemWidth = Math.floor((s.device.width - horizontalPadding - gap) / 2) - 1;
+  const itemWidth = Math.floor((s.device.width - horizontalPadding - gap) / 2);
 
   return {
     container: {
@@ -54,9 +59,11 @@ const createStyles = makeScalingStyles((s, theme) => {
     },
     searchInput: {
       flex: 1,
+      height: '100%',
       color: theme.colors.textPrimary,
       fontFamily: theme.fonts.body,
       fontSize: theme.typography.body,
+      paddingVertical: 0,
       marginLeft: s.mScale(12),
     },
     // Hero Card
@@ -96,7 +103,7 @@ const createStyles = makeScalingStyles((s, theme) => {
       flexDirection: 'row',
       flexWrap: 'wrap',
       paddingHorizontal: theme.spacing[4],
-      gap: gap,
+      justifyContent: 'space-between',
       paddingBottom: s.mScale(44),
     },
     gridCard: {
@@ -104,6 +111,7 @@ const createStyles = makeScalingStyles((s, theme) => {
       height: s.mScale(100),
       borderRadius: theme.borderRadius.md,
       overflow: 'hidden',
+      marginBottom: gap,
     },
     cardInner: {
       flex: 1,
@@ -125,8 +133,8 @@ const createStyles = makeScalingStyles((s, theme) => {
       alignItems: 'center',
     },
     sectionSpacing: {
-      marginTop: s.mScale(8),
-      marginBottom: s.mScale(16),
+      marginTop: s.mScale(4),
+      marginBottom: s.mScale(8),
     },
     trendingContainer: {
       marginBottom: s.mScale(24),
@@ -138,14 +146,61 @@ const createStyles = makeScalingStyles((s, theme) => {
     separator: {
       width: s.mScale(12),
     },
-    trendingHeader: {
-      marginBottom: s.mScale(4),
+    // Search Results specialized styling
+    searchRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: s.mScale(10),
+      gap: s.mScale(16),
+    },
+    searchRowImage: {
+      width: s.mScale(56),
+      height: s.mScale(56),
+      borderRadius: theme.borderRadius.md,
+    },
+    searchRowInfo: {
+      flex: 1,
+      gap: s.mScale(2),
+    },
+    searchResultsSection: {
+      paddingHorizontal: theme.spacing[4],
     }
   };
 });
 
 
-const BrowseCard = ({ item }: { item: Occasion }) => {
+
+
+const SearchResultRow = memo(({ item, provider }: { item: SaavnItem; provider: string }) => {
+  const theme = useTheme();
+  const styles = useScalingStyles(createStyles, theme);
+  const { navigateToItem } = useMediaNavigation();
+  const props = getMediaItemProps(item, provider);
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.7}
+      onPress={() => navigateToItem(item, provider)}
+      style={styles.searchRow}
+    >
+      <TurboImage
+        source={{ uri: props.imageUrl }}
+        style={[styles.searchRowImage, props.isCircle && { borderRadius: 28 }]}
+        resizeMode="cover"
+      />
+      <View style={styles.searchRowInfo}>
+        <Text variant="body" style={{ fontWeight: '600' }} numberOfLines={1}>
+          {decodeHtmlEntities(props.title)}
+        </Text>
+        <Text variant="caption" color="secondary" numberOfLines={1}>
+          {decodeHtmlEntities(props.subtitle)}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+});
+
+const BrowseCard = memo(({ item }: { item: Occasion }) => {
   const theme = useTheme();
   const styles = useScalingStyles(createStyles, theme);
   const props = getMediaItemProps(item, 'gaana');
@@ -172,7 +227,7 @@ const BrowseCard = ({ item }: { item: Occasion }) => {
           resizeMode="cover"
         />
         <LinearGradient
-          colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.1)']}
+          colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.2)']}
           style={styles.gridGradient}
         >
           <Text variant="body" color="onPrimary" style={{ fontWeight: 'bold' }} numberOfLines={1}>
@@ -182,7 +237,7 @@ const BrowseCard = ({ item }: { item: Occasion }) => {
       </SquircleView>
     </TouchableOpacity>
   );
-};
+});
 
 
 
@@ -190,10 +245,12 @@ const SearchScreen = () => {
   const theme = useTheme();
   const styles = useScalingStyles(createStyles, theme);
   const [query, setQuery] = useState('');
+  const inputRef = useRef<TextInput>(null);
 
   const { data: occasionsData, isLoading: isLoadingOccasions } = useOccasions('gaana');
   const { data: trendingData, isLoading: isLoadingTrending } = useTrendingSearch();
   const { data: searchResults, isLoading: isSearching } = useSearch(query, 'unified');
+  const { stateNavigator } = useNavigationEvent();
 
   const occasions = useMemo(() => {
     if (Array.isArray(occasionsData)) return occasionsData;
@@ -241,7 +298,7 @@ const SearchScreen = () => {
   if (isLoadingOccasions || isLoadingTrending) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
-        <ActivityIndicator size="large" color={theme.colors.primaryBase} />
+        <LogoLoader size={80} />
       </View>
     );
   }
@@ -254,7 +311,7 @@ const SearchScreen = () => {
         showsVerticalScrollIndicator={false}
         removeClippedSubviews
         stickyHeaderIndices={[1]}
-        contentContainerStyle={{ paddingBottom: 44 }}
+        contentContainerStyle={{ paddingBottom: 0 }}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
       >
@@ -263,18 +320,30 @@ const SearchScreen = () => {
         </View>
 
         <View style={{ backgroundColor: theme.colors.bgPage, paddingTop: 12 }}>
-          <SquircleView style={styles.searchContainer} cornerSmoothing={1}>
-            <Magnifer size={22} color={theme.colors.textSecondary} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Artists, songs, or podcasts"
-              placeholderTextColor={theme.colors.textSecondary}
-              selectionColor={theme.colors.primaryBase}
-              value={query}
-              onChangeText={setQuery}
-              autoCorrect={false}
-            />
-          </SquircleView>
+          <Pressable onPress={() => inputRef.current?.focus()}>
+            <SquircleView style={styles.searchContainer} cornerSmoothing={1}>
+              <Magnifer size={22} color={theme.colors.textSecondary} />
+              <TextInput
+                ref={inputRef}
+                style={styles.searchInput}
+                placeholder="Artists, songs, or podcasts"
+                placeholderTextColor={theme.colors.textSecondary}
+                selectionColor={theme.colors.primaryBase}
+                value={query}
+                onChangeText={setQuery}
+                autoCorrect={false}
+              />
+              {query.length > 0 && (
+                <TouchableOpacity
+                  activeOpacity={0.6}
+                  onPress={() => setQuery('')}
+                  style={{ padding: 4 }}
+                >
+                  <CloseCircle size={20} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+              )}
+            </SquircleView>
+          </Pressable>
         </View>
 
         {!isSearchActive ? (
@@ -286,7 +355,7 @@ const SearchScreen = () => {
                 title={section.heading}
                 data={section.data}
                 provider="gaana"
-                style={{ marginBottom: 12 }}
+                style={{ marginBottom: 4 }}
               />
             ))}
 
@@ -304,19 +373,79 @@ const SearchScreen = () => {
             </View>
           </>
         ) : (
-          <View style={styles.sectionSpacing}>
+          <View>
             {isSearching ? (
-              <ActivityIndicator color={theme.colors.primaryBase} style={{ marginTop: 20 }} />
+              <View style={{ marginTop: 40 }}>
+                <LogoLoader size={60} />
+              </View>
             ) : (
-              searchResults?.data?.map((section: SaavnSection, idx: number) => (
-                <HomeSection
-                  key={section.heading + idx}
-                  title={section.heading}
-                  data={section.data}
-                  provider="unified"
-                  style={{ marginBottom: 12 }}
-                />
-              ))
+              <>
+                {/* Results Sections */}
+                {(() => {
+                  const topResultSection = searchResults?.data?.find((s: any) =>
+                    s.heading.toLowerCase() === 'top results'
+                  );
+                  const topResults = topResultSection?.data || [];
+                  const displayedTopResults = topResults.slice(0, 5);
+                  const hasMoreTopResults = topResults.length > 5;
+
+                  const handleMoreTopResults = () => {
+                    const sectionId = `top-results-${Date.now()}`;
+                    sectionDataStore.setData(sectionId, topResults);
+                    stateNavigator.navigate(Routes.SectionDetail, {
+                      title: 'Top Results',
+                      sectionId,
+                      provider: 'unified',
+                    });
+                  };
+
+                  const songsSection = searchResults?.data?.find((s: any) => s.heading.toLowerCase() === 'songs');
+
+                  const otherSections = searchResults?.data?.filter((s: any) =>
+                    !['topquery', 'top results', 'songs'].includes(s.heading.toLowerCase()) &&
+                    s.data.length > 0
+                  );
+
+                  return (
+                    <View style={{ gap: 32, paddingBottom: 40 }}>
+                      {displayedTopResults.length > 0 && (
+                        <View style={styles.searchResultsSection}>
+                          <SectionHeader
+                            title="Top Results"
+                            action={hasMoreTopResults ? 'More' : undefined}
+                            onActionPress={handleMoreTopResults}
+                            style={{ marginBottom: 16, paddingHorizontal: 0, marginTop: 0 }}
+                          />
+                          {displayedTopResults.map((item: SaavnItem) => (
+                            <SearchResultRow key={item.id} item={item} provider="unified" />
+                          ))}
+                        </View>
+                      )}
+
+                      {songsSection && (
+                        <View style={styles.searchResultsSection}>
+                          <SectionHeader
+                            title="Songs"
+                            style={{ marginBottom: 16, paddingHorizontal: 0, marginTop: 0 }}
+                          />
+                          {songsSection.data.slice(0, 5).map((item: SaavnItem) => (
+                            <SearchResultRow key={item.id} item={item} provider="unified" />
+                          ))}
+                        </View>
+                      )}
+
+                      {otherSections?.map((section: SaavnSection, idx: number) => (
+                        <HomeSection
+                          key={section.heading + idx}
+                          title={section.heading}
+                          data={section.data}
+                          provider="unified"
+                        />
+                      ))}
+                    </View>
+                  );
+                })()}
+              </>
             )}
           </View>
         )}

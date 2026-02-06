@@ -68,7 +68,12 @@ export const HomeSection: React.FC<HomeSectionProps> = React.memo(({ title, data
 
   return (
     <View style={style}>
-      <SectionHeader title={title} action="More" onActionPress={handleMore} />
+      <SectionHeader
+        title={title}
+        action={data.length > 10 ? 'More' : undefined}
+        onActionPress={handleMore}
+        style={{ marginBottom: 12, marginTop: 16 }}
+      />
       <View>
         <ScrollView
           horizontal
