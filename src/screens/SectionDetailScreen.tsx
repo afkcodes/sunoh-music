@@ -7,13 +7,14 @@
 
 import { LegendList } from '@legendapp/list';
 import { useNavigationEvent } from 'navigation-react';
-import { default as React, useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { ActivityIndicator, useWindowDimensions, View } from 'react-native';
 import { MediaCard } from '../components/common/MediaCard';
 import { SafeView } from '../components/common/SafeView';
 import { Text } from '../components/common/Text';
 import { HomeSection } from '../components/home/HomeSection';
 import { useMediaNavigation } from '../hooks/useMediaNavigation';
+import { useOccasionDetails } from '../hooks/useOccasionDetails';
 import { sectionDataStore } from '../services/stores/SectionDataStore';
 import { spacing, ThemeColors } from '../theme';
 import { useTheme } from '../theme/ThemeContext';
@@ -50,8 +51,6 @@ const createStyles = makeScalingStyles((s, colors: ThemeColors) => ({
   },
 }));
 
-import { useOccasionDetails } from '../hooks/useOccasionDetails';
-
 export const SectionDetailScreen: React.FC = () => {
   const { colors } = useTheme();
   const styles = useScalingStyles(createStyles, colors);
@@ -69,7 +68,7 @@ export const SectionDetailScreen: React.FC = () => {
     isOccasion
   );
 
-  const sectionData = React.useMemo(() => {
+  const sectionData = useMemo(() => {
     if (isOccasion) {
       if (!occasionData) return [];
       // Gaana returns raw array or { data: [] }
@@ -83,7 +82,7 @@ export const SectionDetailScreen: React.FC = () => {
   const { width } = useWindowDimensions();
   const s = useScaling();
 
-  const cardSize = React.useMemo(() => {
+  const cardSize = useMemo(() => {
     const listPadding = s.mScale(spacing.lg) * 2;
     const availableWidth = width - listPadding;
     const columnWidth = availableWidth / NUM_COLUMNS;
@@ -113,7 +112,7 @@ export const SectionDetailScreen: React.FC = () => {
   );
 
   // If the API returns categorized sections (common in Occasions details)
-  const isCategorized = React.useMemo(() => {
+  const isCategorized = useMemo(() => {
     if (!isOccasion || !occasionData) return false;
     // Check if what we got is an array of sections (heading + data)
     const data = Array.isArray(occasionData) ? occasionData : occasionData.data;
@@ -133,7 +132,7 @@ export const SectionDetailScreen: React.FC = () => {
     }
 
     if (isCategorized) {
-      const sections = Array.isArray(occasionData) ? occasionData : occasionData.data;
+      const sections = Array.isArray(occasionData) ? occasionData : (occasionData as any).data;
       return (
         <LegendList
           data={sections}
@@ -145,7 +144,7 @@ export const SectionDetailScreen: React.FC = () => {
               style={{ marginBottom: 24 }}
             />
           )}
-          keyExtractor={(item, index) => item.heading + index}
+          keyExtractor={(item, index) => (item.heading || 'section') + index}
           contentContainerStyle={{ paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}
           estimatedItemSize={250}
@@ -157,7 +156,7 @@ export const SectionDetailScreen: React.FC = () => {
       <LegendList
         data={sectionData}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id || (item as any).url || Math.random().toString()}
+        keyExtractor={(item) => (item.id || (item as any).url || Math.random().toString())}
         contentContainerStyle={styles.listContent}
         numColumns={NUM_COLUMNS}
         showsVerticalScrollIndicator={false}

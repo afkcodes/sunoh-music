@@ -9,7 +9,7 @@ import { spacing, ThemeColors } from '../../theme';
 import { useTheme } from '../../theme/ThemeContext';
 import { SaavnItem } from '../../types/saavn';
 import { getMediaItemProps } from '../../utils/media';
-import { makeScalingStyles, useScaling, useScalingStyles } from '../../utils/style.util';
+import { makeScalingStyles, useScalingStyles } from '../../utils/style.util';
 import { MediaCard } from '../common/MediaCard';
 import { SectionHeader } from '../common/SectionHeader';
 
@@ -31,7 +31,6 @@ const createStyles = makeScalingStyles((s, _colors: ThemeColors) => ({
 
 export const HomeSection: React.FC<HomeSectionProps> = React.memo(({ title, data, provider: sectionProvider, style }) => {
   const { colors } = useTheme();
-  const s = useScaling();
   const styles = useScalingStyles(createStyles, colors);
   const { navigateToItem } = useMediaNavigation();
   const { stateNavigator } = useNavigationEvent();

@@ -6,6 +6,7 @@ import { getMediaItemProps } from '../utils/media';
 
 export const useMediaNavigation = () => {
   const { stateNavigator } = useNavigationEvent();
+  
 
   const navigateToItem = useCallback((item: SaavnItem, sectionProvider?: string) => {
     const props = getMediaItemProps(item, sectionProvider);

@@ -92,8 +92,14 @@ export const Tabs = () => {
             <Scene stateKey={Routes.Playlist}>
               <PlaylistScreen />
             </Scene>
+            <Scene stateKey={Routes.Album}>
+              <AlbumScreen />
+            </Scene>
             <Scene stateKey={Routes.SectionDetail}>
               <SectionDetailScreen />
+            </Scene>
+            <Scene stateKey={Routes.Details}>
+              <LibraryScreen />
             </Scene>
           </NavigationStack>
         </NavigationHandler>
