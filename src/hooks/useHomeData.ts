@@ -7,8 +7,11 @@ interface UseHomeDataProps {
   provider?: MusicProvider;
 }
 
+import { useUserSettings } from '../store/useUserSettings';
+
 export const useHomeData = (props?: UseHomeDataProps) => {
-  const languages = props?.languages || 'hindi,english';
+  const { languages: storedLangs } = useUserSettings();
+  const languages = props?.languages || storedLangs.join(',');
   const provider = props?.provider;
 
   return useQuery<SaavnResponse, Error>({

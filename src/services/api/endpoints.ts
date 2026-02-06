@@ -13,6 +13,7 @@ export const MUSIC_COLLECTION = (seokey: string) => `${baseURL}/music/collection
 export const MUSIC_ALBUM_LIST = `${baseURL}/music/album-list`;
 export const MUSIC_OCCASIONS = `${baseURL}/music/occasions`;
 export const MUSIC_OCCASIONS_DETAIL = (slug: string) => `${baseURL}/music/occasions/${slug}`;
+export const MUSIC_LANGUAGES = `${baseURL}/music/languages`;
 
 // Lyrics Endpoints
 export const LYRICS_GET = (songName: string) => `${baseURL}/lyrics/${songName}`;

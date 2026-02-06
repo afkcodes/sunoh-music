@@ -1,15 +1,16 @@
 import { AlbumResponse } from '../../types/album';
 import { SaavnResponse } from '../../types/saavn';
 import {
-  MUSIC_ALBUM,
-  MUSIC_ARTIST,
-  MUSIC_HOME,
-  MUSIC_OCCASIONS,
-  MUSIC_OCCASIONS_DETAIL,
-  MUSIC_PLAYLIST,
-  MUSIC_SEARCH,
-  MUSIC_SONG,
-  MUSIC_SONG_STREAM
+    MUSIC_ALBUM,
+    MUSIC_ARTIST,
+    MUSIC_HOME,
+    MUSIC_LANGUAGES,
+    MUSIC_OCCASIONS,
+    MUSIC_OCCASIONS_DETAIL,
+    MUSIC_PLAYLIST,
+    MUSIC_SEARCH,
+    MUSIC_SONG,
+    MUSIC_SONG_STREAM
 } from './endpoints';
 
 export type MusicProvider = 'gaana' | 'saavn' | 'spotify' | 'unified';
@@ -185,6 +186,19 @@ export const saavnApi = {
       return await response.json();
     } catch (error) {
       console.error('Failed to fetch trending search:', error);
+      throw error;
+    }
+  },
+  
+  fetchLanguages: async (): Promise<any> => {
+    try {
+      const response = await fetch(MUSIC_LANGUAGES);
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to fetch languages:', error);
       throw error;
     }
   },

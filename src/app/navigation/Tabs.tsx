@@ -12,6 +12,7 @@ import LibraryScreen from '../../screens/LibraryScreen';
 import { PlaylistScreen } from '../../screens/PlaylistScreen';
 import SearchScreen from '../../screens/SearchScreen';
 import { SectionDetailScreen } from '../../screens/SectionDetailScreen';
+import SettingsScreen from '../../screens/SettingsScreen';
 
 // Assets
 const HomeIcon = require('../../assets/images/home.png');
@@ -61,6 +62,9 @@ export const Tabs = () => {
             </Scene>
             <Scene stateKey={Routes.Playlist}>
               <PlaylistScreen />
+            </Scene>
+            <Scene stateKey={Routes.Settings}>
+              <SettingsScreen />
             </Scene>
             <Scene stateKey={Routes.Details}>
               {/* Placeholder for Details if needed later */}

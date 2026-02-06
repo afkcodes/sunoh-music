@@ -20,6 +20,7 @@ export const homeNavigator = new StateNavigator([
   { key: Routes.SectionDetail, trackCrumbTrail: true },
   { key: Routes.Details, trackCrumbTrail: true },
   { key: Routes.Playlist, trackCrumbTrail: true },
+  { key: Routes.Settings, trackCrumbTrail: true },
 ]);
 
 /**

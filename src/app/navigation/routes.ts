@@ -21,4 +21,7 @@ export const Routes = {
   
   // Player
   Player: 'player',
+
+  // Settings
+  Settings: 'settings',
 } as const;

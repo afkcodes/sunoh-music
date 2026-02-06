@@ -4,6 +4,8 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { useTheme } from '../theme/ThemeContext';
 import { makeScalingStyles, useScalingStyles } from '../utils/style.util';
 
+import { useNavigationEvent } from 'navigation-react';
+import { Routes } from '../app/navigation/routes';
 import { SafeView } from '../components/common';
 import LogoAnimation from '../components/common/Loader';
 import { HomeHeader } from '../components/home/HomeHeader';
@@ -30,6 +32,7 @@ const HomeScreen = () => {
     const { colors } = useTheme();
     const styles = useScalingStyles(createStyles, colors);
     const { data: homeData, isLoading, error } = useHomeData({ provider: 'unified' });
+    const { stateNavigator } = useNavigationEvent();
 
     if (isLoading) {
         // return <HomeSkeleton />;
@@ -57,7 +60,7 @@ const HomeScreen = () => {
                     scrollEventThrottle={64}
 
                 >
-                    <HomeHeader />
+                    <HomeHeader onSettingsPress={() => stateNavigator.navigate(Routes.Settings)} />
 
                     {homeData?.data?.slice(0, -1).map((section, index) => (
                         <HomeSection

@@ -2175,6 +2175,29 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@lodev09/react-native-true-sheet@npm:^3.8.2":
+  version: 3.8.2
+  resolution: "@lodev09/react-native-true-sheet@npm:3.8.2"
+  peerDependencies:
+    "@gorhom/bottom-sheet": ">=5"
+    "@react-navigation/native": ">=7"
+    react: "*"
+    react-native: "*"
+    react-native-reanimated: ">=4"
+    react-native-worklets: "*"
+  peerDependenciesMeta:
+    "@gorhom/bottom-sheet":
+      optional: true
+    "@react-navigation/native":
+      optional: true
+    react-native-reanimated:
+      optional: true
+    react-native-worklets:
+      optional: true
+  checksum: 10c0/28e220e1ddb11f01027f8266ab79eb4982f8b504cbeb942aded99044d5ffd4f160022bf27d822bf89d8a766eefa4d7d46e2bda85d9bc3a3fe099f63f4c0dca07
+  languageName: node
+  linkType: hard
+
 "@napi-rs/wasm-runtime@npm:^0.2.11":
   version: 0.2.12
   resolution: "@napi-rs/wasm-runtime@npm:0.2.12"
@@ -4103,6 +4126,7 @@ __metadata:
     "@babel/runtime": "npm:^7.28.6"
     "@iconify-json/solar": "npm:^1.2.5"
     "@legendapp/list": "npm:^2.0.19"
+    "@lodev09/react-native-true-sheet": "npm:^3.8.2"
     "@react-native-community/cli": "npm:20.1.1"
     "@react-native-community/cli-platform-android": "npm:20.1.1"
     "@react-native-community/cli-platform-ios": "npm:20.1.1"

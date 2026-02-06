@@ -21,13 +21,13 @@
 
 import { useCallback, useMemo } from 'react';
 import {
-  Dimensions,
-  type ImageStyle,
-  PixelRatio,
-  Platform,
-  type TextStyle,
-  useWindowDimensions,
-  type ViewStyle,
+    Dimensions,
+    type ImageStyle,
+    PixelRatio,
+    Platform,
+    type TextStyle,
+    useWindowDimensions,
+    type ViewStyle,
 } from 'react-native';
 
 // ============================================================================
@@ -198,9 +198,9 @@ export const useScaling = (): ScalingFunctions => {
 
 type StyleProp = ViewStyle | TextStyle | ImageStyle;
 
-export type ScalingStyleFactory<T extends Record<string, StyleProp>> = (
+export type ScalingStyleFactory<T extends Record<string, StyleProp>, Theme = any> = (
   s: ScalingFunctions,
-  theme: any
+  theme: Theme
 ) => T;
 
 export type ScalingOnlyStyleFactory<T extends Record<string, StyleProp>> = (
@@ -242,9 +242,9 @@ export type ScalingOnlyStyleFactory<T extends Record<string, StyleProp>> = (
  * };
  * ```
  */
-export function useScalingStyles<T extends Record<string, StyleProp>>(
-  styleFactory: ScalingStyleFactory<T>,
-  theme: any
+export function useScalingStyles<T extends Record<string, StyleProp>, Theme = any>(
+  styleFactory: ScalingStyleFactory<T, Theme>,
+  theme: Theme
 ): T {
   const s = useScaling();
 
@@ -292,8 +292,9 @@ export function useScalingStylesOnly<T extends Record<string, StyleProp>>(
 export function useDynamicStyles<
   T extends Record<string, StyleProp>,
   P extends Record<string, any>,
+  Theme = any
   // biome-ignore lint/suspicious/noExplicitAny: Theme system uses dynamic types
->(styleFactory: (s: ScalingFunctions, theme: any, props: P) => T, theme: any, props: P): T {
+>(styleFactory: (s: ScalingFunctions, theme: Theme, props: P) => T, theme: Theme, props: P): T {
   const s = useScaling();
 
   return useMemo(() => styleFactory(s, theme, props), [s, theme, props, styleFactory]);
@@ -344,9 +345,9 @@ export function useInlineStyles<T extends Record<string, StyleProp>>(
  * Inline styles with theme support.
  * Same warnings as useInlineStyles - DO NOT use props/state!
  */
-export function useInlineThemedStyles<T extends Record<string, StyleProp>>(
-  styleFactory: ScalingStyleFactory<T>,
-  theme: any
+export function useInlineThemedStyles<T extends Record<string, StyleProp>, Theme = any>(
+  styleFactory: ScalingStyleFactory<T, Theme>,
+  theme: Theme
 ): T {
   const s = useScaling();
 
@@ -370,9 +371,9 @@ export function useInlineThemedStyles<T extends Record<string, StyleProp>>(
  * }));
  * ```
  */
-export function makeScalingStyles<T extends Record<string, StyleProp>>(
-  factory: ScalingStyleFactory<T>
-): ScalingStyleFactory<T> {
+export function makeScalingStyles<T extends Record<string, StyleProp>, Theme = any>(
+  factory: ScalingStyleFactory<T, Theme>
+): ScalingStyleFactory<T, Theme> {
   return factory;
 }
 

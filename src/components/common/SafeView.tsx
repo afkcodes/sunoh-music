@@ -99,16 +99,16 @@ export const SafeView: React.FC<SafeViewProps> = ({
 
   // Calculate background color
   // Priority: backgroundColor prop > themed background (#09090b for dark theme) > transparent
-  const bgColor = backgroundColor || (useThemedBackground ? theme.colors.bgSurface : undefined);
+  const bgColor = backgroundColor || (useThemedBackground ? theme.colors.bgPage : undefined);
 
   // Calculate padding based on safe area insets
   const safeAreaPadding: ViewStyle = useSafeArea
     ? {
-        paddingTop: applyTopInset ? insets.top : 0,
-        paddingBottom: applyBottomInset ? insets.bottom : 0,
-        paddingLeft: applyLeftInset ? insets.left : 0,
-        paddingRight: applyRightInset ? insets.right : 0,
-      }
+      paddingTop: applyTopInset ? insets.top : 0,
+      paddingBottom: applyBottomInset ? insets.bottom : 0,
+      paddingLeft: applyLeftInset ? insets.left : 0,
+      paddingRight: applyRightInset ? insets.right : 0,
+    }
     : {};
 
   // Combine all styles
