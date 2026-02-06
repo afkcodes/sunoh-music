@@ -70,7 +70,7 @@ export const HomeSection: React.FC<HomeSectionProps> = React.memo(({ title, data
   return (
     <View style={style}>
       <SectionHeader title={title} action="More" onActionPress={handleMore} />
-      <View style={{ height: s.mScale(200) }}>
+      <View>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -80,7 +80,7 @@ export const HomeSection: React.FC<HomeSectionProps> = React.memo(({ title, data
           scrollEventThrottle={64}
         >
           {limitedData.map((item, index) => (
-            <React.Fragment key={item.id}>
+            <React.Fragment key={String(item.id + index)}>
               {index > 0 && <View style={styles.separator} />}
               {renderInnerItem({ item })}
             </React.Fragment>

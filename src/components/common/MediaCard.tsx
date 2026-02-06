@@ -26,7 +26,7 @@ interface MediaCardProps {
 
 const createStyles = makeScalingStyles((s, colors: ThemeColors) => ({
   container: {
-    width: s.mScale(140), // Default width
+    width: s.mScale(144), // Default width
     gap: s.mScale(8),
   },
   imageContainer: {
@@ -51,12 +51,12 @@ export const MediaCard: React.FC<MediaCardProps> = memo(({
   title,
   subtitle,
   imageUrl,
-  size = 140,
+  size = 144,
   variant = 'default',
   onPress,
   style,
 }) => {
-  const { colors } = useTheme();
+  const { colors, scale: s } = useTheme();
   const styles = useScalingStyles(createStyles, colors);
   const scale = useSharedValue(1);
 
@@ -81,7 +81,7 @@ export const MediaCard: React.FC<MediaCardProps> = memo(({
   const isCircle = variant === 'circle';
 
   return (
-    <Animated.View style={[styles.container, style, { width: size }]}>
+    <Animated.View style={[styles.container, style, { width: s.mScale(size) }]}>
       <Pressable
         onPress={onPress}
         onPressIn={handlePressIn}
@@ -91,7 +91,7 @@ export const MediaCard: React.FC<MediaCardProps> = memo(({
         <Animated.View style={[animatedStyle]}>
           {/* Artwork */}
           {/* Artwork Wrapper to enforce layout reservation */}
-          <View style={{ width: size, height: size }}>
+          <View style={{ width: s.mScale(size), height: s.mScale(size) }}>
             <SquircleView
               style={[
                 styles.imageContainer,

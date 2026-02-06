@@ -4,6 +4,8 @@ import {
   MUSIC_ALBUM,
   MUSIC_ARTIST,
   MUSIC_HOME,
+  MUSIC_OCCASIONS,
+  MUSIC_OCCASIONS_DETAIL,
   MUSIC_PLAYLIST,
   MUSIC_SEARCH,
   MUSIC_SONG,
@@ -138,6 +140,51 @@ export const saavnApi = {
       return await response.json();
     } catch (error) {
       console.error('Failed to search:', error);
+      throw error;
+    }
+  },
+
+  fetchOccasions: async (provider: MusicProvider = 'gaana'): Promise<any> => {
+    try {
+      const url = `${MUSIC_OCCASIONS}?provider=${encodeURIComponent(provider)}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to fetch occasions:', error);
+      throw error;
+    }
+  },
+
+  fetchOccasionDetails: async (
+    slug: string,
+    provider: MusicProvider = 'gaana'
+  ): Promise<any> => {
+    try {
+      const url = `${MUSIC_OCCASIONS_DETAIL(slug)}?provider=${encodeURIComponent(provider)}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to fetch occasion details:', error);
+      throw error;
+    }
+  },
+
+  fetchTrendingSearch: async (): Promise<any> => {
+    try {
+      const url = `${MUSIC_SEARCH}?query=`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to fetch trending search:', error);
       throw error;
     }
   },

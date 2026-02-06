@@ -43,6 +43,13 @@ const dataConfigs = {
     language: 'language',
     name: 'name',
   },
+  occasion: {
+    id: 'id',
+    title: ['title', 'name'],
+    image: ['image.2.link', 'image.0.link', 'artwork', 'atw', 'atwj'],
+    subtitle: ['type'],
+    token: ['url', 'slug', 'id'],
+  },
 } as const;
 
 export { dataConfigs };

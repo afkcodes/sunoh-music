@@ -16,7 +16,7 @@ export interface SaavnItem {
   title: string;
   subTitle: string;
   image: SaavnImage[] | string; // Sometimes string (playlist), sometimes array (song/album)
-  type: 'song' | 'album' | 'playlist' | 'radio_station' | 'channel' | 'artist';
+  type: 'song' | 'album' | 'playlist' | 'radio_station' | 'channel' | 'artist' | 'occasion';
   token: string;
   playCount?: string;
   releaseDate?: string;
@@ -45,4 +45,18 @@ export interface BaseSaavnResponse {
 
 export interface SaavnResponse extends BaseSaavnResponse {
   data: SaavnSection[];
+}
+
+export interface Occasion {
+  id: string;
+  title: string;
+  type: string;
+  image?: SaavnImage[] | string;
+  url: string; // This is used as slug
+  source?: string;
+  // Fallbacks for compatibility
+  name?: string;
+  slug?: string;
+  artwork?: string;
+  data?: SaavnItem[];
 }

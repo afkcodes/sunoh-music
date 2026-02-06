@@ -8,10 +8,11 @@
 import { LegendList } from '@legendapp/list';
 import { useNavigationEvent } from 'navigation-react';
 import { default as React, useCallback } from 'react';
-import { useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, useWindowDimensions, View } from 'react-native';
 import { MediaCard } from '../components/common/MediaCard';
 import { SafeView } from '../components/common/SafeView';
 import { Text } from '../components/common/Text';
+import { HomeSection } from '../components/home/HomeSection';
 import { useMediaNavigation } from '../hooks/useMediaNavigation';
 import { sectionDataStore } from '../services/stores/SectionDataStore';
 import { spacing, ThemeColors } from '../theme';
@@ -30,7 +31,7 @@ const createStyles = makeScalingStyles((s, colors: ThemeColors) => ({
   header: {
     paddingHorizontal: s.mScale(spacing.lg),
     paddingTop: s.mScale(spacing.md),
-    paddingBottom: s.mScale(spacing.sm),
+    paddingBottom: s.mScale(spacing.xl),
   },
   listContent: {
     paddingHorizontal: s.mScale(spacing.lg),
@@ -43,34 +44,50 @@ const createStyles = makeScalingStyles((s, colors: ThemeColors) => ({
   itemInner: {
     marginHorizontal: s.mScale(spacing.xs),
   },
+  loadingContainer: {
+    padding: s.mScale(spacing.xl),
+    alignItems: 'center',
+  },
 }));
+
+import { useOccasionDetails } from '../hooks/useOccasionDetails';
 
 export const SectionDetailScreen: React.FC = () => {
   const { colors } = useTheme();
   const styles = useScalingStyles(createStyles, colors);
-  const { data } = useNavigationEvent();
+  const { data: navData } = useNavigationEvent();
   const { navigateToItem } = useMediaNavigation();
 
-  const sectionTitle = data.title as string;
-  const sectionId = data.sectionId as string;
+  const sectionTitle = navData.title as string;
+  const sectionId = navData.sectionId as string;
+  const sectionProvider = navData.provider as any;
+  const isOccasion = !!navData.isOccasion;
+
+  const { data: occasionData, isLoading } = useOccasionDetails(
+    sectionId,
+    sectionProvider,
+    isOccasion
+  );
+
   const sectionData = React.useMemo(() => {
+    if (isOccasion) {
+      if (!occasionData) return [];
+      // Gaana returns raw array or { data: [] }
+      if (Array.isArray(occasionData)) return occasionData;
+      if (Array.isArray(occasionData.data)) return occasionData.data;
+      return [];
+    }
     return sectionDataStore.getData(sectionId) || [];
-  }, [sectionId]);
-  const sectionProvider = data.provider as any;
+  }, [sectionId, isOccasion, occasionData]);
 
   const { width } = useWindowDimensions();
   const s = useScaling();
 
   const cardSize = React.useMemo(() => {
-    // Calculate available width for each card
-    // Screen width - List Padding (lg * 2) - Item Inner Margin (xs * 2 * columns)
-    // Actually simpler: (Width - ListPadding) / Columns - ItemMargins
-    // Let's ensure we fit within the 50% container
     const listPadding = s.mScale(spacing.lg) * 2;
     const availableWidth = width - listPadding;
     const columnWidth = availableWidth / NUM_COLUMNS;
-    // Remove margins
-    return columnWidth - s.mScale(spacing.xs) * 2 - s.mScale(2); // -2 for rounding safety
+    return columnWidth - s.mScale(spacing.xs) * 2 - s.mScale(2);
   }, [width, s]);
 
   const renderItem = useCallback(
@@ -95,25 +112,74 @@ export const SectionDetailScreen: React.FC = () => {
     [navigateToItem, sectionProvider, styles, cardSize]
   );
 
+  // If the API returns categorized sections (common in Occasions details)
+  const isCategorized = React.useMemo(() => {
+    if (!isOccasion || !occasionData) return false;
+    // Check if what we got is an array of sections (heading + data)
+    const data = Array.isArray(occasionData) ? occasionData : occasionData.data;
+    if (Array.isArray(data) && data.length > 0 && data[0].heading && data[0].data) {
+      return true;
+    }
+    return false;
+  }, [isOccasion, occasionData]);
+
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator color={colors.primaryBase} />
+        </View>
+      );
+    }
+
+    if (isCategorized) {
+      const sections = Array.isArray(occasionData) ? occasionData : occasionData.data;
+      return (
+        <LegendList
+          data={sections}
+          renderItem={({ item: section }: { item: any }) => (
+            <HomeSection
+              title={section.heading}
+              data={section.data}
+              provider={sectionProvider}
+              style={{ marginBottom: 24 }}
+            />
+          )}
+          keyExtractor={(item, index) => item.heading + index}
+          contentContainerStyle={{ paddingBottom: 40 }}
+          showsVerticalScrollIndicator={false}
+          estimatedItemSize={250}
+        />
+      );
+    }
+
+    return (
+      <LegendList
+        data={sectionData}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id || (item as any).url || Math.random().toString()}
+        contentContainerStyle={styles.listContent}
+        numColumns={NUM_COLUMNS}
+        showsVerticalScrollIndicator={false}
+        estimatedItemSize={220}
+      />
+    );
+  };
+
   return (
     <SafeView style={styles.container}>
       <View style={styles.header}>
         <Text variant="h2" color="primary">
           {sectionTitle}
         </Text>
-        <Text variant="caption" color="secondary" style={{ marginTop: 4 }}>
-          {sectionData.length} items
-        </Text>
+        {!isCategorized && (
+          <Text variant="caption" color="secondary" style={{ marginTop: 4 }}>
+            {sectionData.length} items
+          </Text>
+        )}
       </View>
 
-      <LegendList
-        data={sectionData}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        numColumns={NUM_COLUMNS}
-        showsVerticalScrollIndicator={false}
-      />
+      {renderContent()}
     </SafeView>
   );
 };

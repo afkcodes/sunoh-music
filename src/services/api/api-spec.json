@@ -1,7 +1,7 @@
 {
   "project": "Sunoh API",
-  "version": "1.0.1",
-  "baseUrl": "https://api.sunoh.online",
+  "version": "1.0.3",
+  "baseUrl": "http://localhost:3600",
   "endpoints": {
     "General": [
       {
@@ -37,11 +37,12 @@
       {
         "path": "/music/search",
         "method": "GET",
-        "description": "Search for songs, albums, and playlists",
+        "description": "Unified search for songs, albums, and playlists. Merges results from Saavn and Gaana.",
         "query": {
           "query": "The search term",
-          "provider": "[optional] 'gaana' or 'saavn'. Defaults to saavn.",
-          "lang": "Comma separated languages"
+          "provider": "[optional] 'gaana', 'saavn', or undefined (unified). Defaults to unified.",
+          "lang": "Comma separated languages",
+          "type": "'all', 'songs', 'albums', 'playlists', 'artists'"
         }
       },
       {
@@ -112,6 +113,31 @@
           "language": "Target language",
           "page": "Page number"
         }
+      },
+      {
+        "path": "/music/occasions",
+        "method": "GET",
+        "description": "Get list of occasions/moods/genres (Gaana)",
+        "query": {
+          "provider": "gaana"
+        }
+      },
+      {
+        "path": "/music/occasions/:slug",
+        "method": "GET",
+        "description": "Get occasion detail (Gaana)",
+        "query": {
+          "provider": "gaana"
+        }
+      },
+      {
+        "path": "/music/occasions/:id/items",
+        "method": "GET",
+        "description": "Get occasion items list (Gaana)",
+        "query": {
+          "provider": "gaana",
+          "limit": "0,40"
+        }
       }
     ],
     "Lyrics": [
@@ -133,7 +159,8 @@
         "Stream Decryption",
         "Rich Artist Profiles",
         "Featured Collections",
-        "Radio Stations (Numeric IDs)"
+        "Radio Stations (Numeric IDs)",
+        "Occasions/Moods (Curated & Flat)"
       ]
     },
     "saavn": {

@@ -36,4 +36,5 @@ export const libraryNavigator = new StateNavigator([
 export const searchNavigator = new StateNavigator([
   { key: Routes.Search },
   { key: Routes.Playlist, trackCrumbTrail: true },
+  { key: Routes.SectionDetail, trackCrumbTrail: true },
 ]);

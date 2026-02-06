@@ -92,6 +92,9 @@ export const Tabs = () => {
             <Scene stateKey={Routes.Playlist}>
               <PlaylistScreen />
             </Scene>
+            <Scene stateKey={Routes.SectionDetail}>
+              <SectionDetailScreen />
+            </Scene>
           </NavigationStack>
         </NavigationHandler>
       </TabBarItem>
