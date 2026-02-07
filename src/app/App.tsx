@@ -1,11 +1,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NavigationHandler } from 'navigation-react';
 import { NavigationStack, Scene } from 'navigation-react-native';
-import React from 'react';
+import React, { useRef } from 'react';
 import { StatusBar } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { SheetRef } from '../components/common/Sheet';
+import { MiniPlayer } from '../components/player/MiniPlayer';
+import { PlayerSheet } from '../components/player/PlayerSheet';
 import { ThemeProvider, useTheme } from '../theme/ThemeContext';
 import { rootNavigator } from './navigation/navigators';
 import { Routes } from './navigation/routes';
@@ -15,6 +18,7 @@ const queryClient = new QueryClient();
 
 function AppContent() {
   const { isDark, colors } = useTheme();
+  const playerSheetRef = useRef<SheetRef>(null);
 
   return (
     <>
@@ -29,6 +33,8 @@ function AppContent() {
           </Scene>
           {/* Global Modal / Player Scenes can go here to cover Tabs */}
         </NavigationStack>
+        <MiniPlayer onPress={() => playerSheetRef.current?.present()} />
+        <PlayerSheet ref={playerSheetRef} />
       </NavigationHandler>
     </>
   );

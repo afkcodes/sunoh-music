@@ -9,6 +9,8 @@ export interface SheetRef {
 
 interface SheetProps extends Omit<TrueSheetProps, 'ref'> {
   children: React.ReactNode;
+  sizes?: (string | number)[];
+  grabberHeader?: boolean;
 }
 
 export const Sheet = forwardRef<SheetRef, SheetProps>(({ children, ...props }, ref) => {
@@ -25,7 +27,6 @@ export const Sheet = forwardRef<SheetRef, SheetProps>(({ children, ...props }, r
       ref={sheetRef}
       backgroundColor={colors.bgSurface}
       cornerRadius={24}
-      detents={['auto']}
       {...props}
     >
       {children}

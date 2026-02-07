@@ -133,7 +133,7 @@ const createStyles = makeScalingStyles((s, theme) => {
       alignItems: 'center',
     },
     sectionSpacing: {
-      marginTop: s.mScale(4),
+      marginTop: s.mScale(8),
       marginBottom: s.mScale(8),
     },
     trendingContainer: {

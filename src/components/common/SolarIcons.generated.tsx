@@ -131,15 +131,13 @@ export function MinusCircle({ color = 'currentColor', size = 24, ...props }: Svg
 
 export function Pause({ color = 'currentColor', size = 24, ...props }: SvgProps & { size?: number }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" {...props}>
-      <Path fill="none" stroke={color} strokeWidth="1.5" d="M2 6c0-1.886 0-2.828.586-3.414S4.114 2 6 2s2.828 0 3.414.586S10 4.114 10 6v12c0 1.886 0 2.828-.586 3.414S7.886 22 6 22s-2.828 0-3.414-.586S2 19.886 2 18zm12 0c0-1.886 0-2.828.586-3.414S16.114 2 18 2s2.828 0 3.414.586S22 4.114 22 6v12c0 1.886 0 2.828-.586 3.414S19.886 22 18 22s-2.828 0-3.414-.586S14 19.886 14 18z" />
-    </Svg>
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...props}><Path fill={color} fillRule="evenodd" d="M7 5h2c.552 0 1 .418 1 .933v12.134c0 .515-.448.933-1 .933H7c-.552 0-1-.418-1-.933V5.933C6 5.418 6.448 5 7 5m8 0h2c.552 0 1 .418 1 .933v12.134c0 .515-.448.933-1 .933h-2c-.552 0-1-.418-1-.933V5.933c0-.515.448-.933 1-.933" /></Svg>
   );
 }
 
 export function Pen({ color = 'currentColor', size = 24, ...props }: SvgProps & { size?: number }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" {...props}>
+    <Svg >
       <Path fill="none" stroke={color} strokeWidth="1.5" d="m14.36 4.079l.927-.927a3.932 3.932 0 0 1 5.561 5.561l-.927.927m-5.56-5.561s.115 1.97 1.853 3.707C17.952 9.524 19.92 9.64 19.92 9.64m-5.56-5.561l-8.522 8.52c-.577.578-.866.867-1.114 1.185a6.6 6.6 0 0 0-.749 1.211c-.173.364-.302.752-.56 1.526l-1.094 3.281m17.6-10.162L11.4 18.16c-.577.577-.866.866-1.184 1.114a6.6 6.6 0 0 1-1.211.749c-.364.173-.751.302-1.526.56l-3.281 1.094m0 0l-.802.268a1.06 1.06 0 0 1-1.342-1.342l.268-.802m1.876 1.876l-1.876-1.876" />
     </Svg>
   );
@@ -147,8 +145,14 @@ export function Pen({ color = 'currentColor', size = 24, ...props }: SvgProps & 
 
 export function Play({ color = 'currentColor', size = 24, ...props }: SvgProps & { size?: number }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" {...props}><Path fill={color} d="M6 20.196V3.804a1 1 0 0 1 1.53-.848l13.113 8.196a1 1 0 0 1 0 1.696L7.53 21.044A1 1 0 0 1 6 20.196" /></Svg>
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...props}><Path fill={color} fillRule="evenodd" d="m9.524 4.938l10.092 6.21a1 1 0 0 1 0 1.704l-10.092 6.21A1 1 0 0 1 8 18.21V5.79a1 1 0 0 1 1.524-.852" /></Svg>
   );
+}
+
+export function SkipPrevious({ color = 'currentColor', size = 24, ...props }: SvgProps & { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...props}><Path fill={color} d="m8 11.333l10.223-6.815a.5.5 0 0 1 .777.416v14.132a.5.5 0 0 1-.777.416L8 12.667V19a1 1 0 1 1-2 0V5a1 1 0 0 1 2 0z" /></Svg>
+  )
 }
 
 export function AddCircle({ color = 'currentColor', size = 24, ...props }: SvgProps & { size?: number }) {
@@ -909,19 +913,11 @@ export function Bell({ color = 'currentColor', size = 24, ...props }: SvgProps &
   );
 }
 
+
+
 export function SkipNext({ color = 'currentColor', size = 24, ...props }: SvgProps & { size?: number }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" {...props}>
-      <G fill="none" stroke={color} strokeWidth="1.5"><Path d="M16.66 9.353c1.787 1.154 1.787 4.14 0 5.294L5.87 21.614C4.135 22.737 2 21.277 2 18.968V5.033c0-2.31 2.134-3.769 3.87-2.648z" /><Path strokeLinecap="round" d="M22 5v14" /></G>
-    </Svg>
-  );
-}
-
-export function SkipPrevious({ color = 'currentColor', size = 24, ...props }: SvgProps & { size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" {...props}>
-      <G fill="none" stroke={color} strokeWidth="1.5"><Path d="M7.34 9.353c-1.787 1.154-1.787 4.14 0 5.294l10.79 6.967c1.736 1.122 3.87-.338 3.87-2.647V5.033c0-2.31-2.134-3.769-3.87-2.648z" /><Path strokeLinecap="round" d="M2 5v14" /></G>
-    </Svg>
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...props}><Path fill={color} d="M16 12.667L5.777 19.482A.5.5 0 0 1 5 19.066V4.934a.5.5 0 0 1 .777-.416L16 11.333V5a1 1 0 1 1 2 0v14a1 1 0 1 1-2 0z" /></Svg>
   );
 }
 

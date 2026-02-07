@@ -2774,6 +2774,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@somesoap/react-native-image-palette@npm:^1.2.2":
+  version: 1.2.2
+  resolution: "@somesoap/react-native-image-palette@npm:1.2.2"
+  peerDependencies:
+    react: "*"
+    react-native: "*"
+  checksum: 10c0/0a4f39233b6ac825387748e4c81aaf851d49a235f7afe41eb93869c391b8b109ba07ab327d54d6035df696701244630ea7d79bd8a5254192dc280b7aa41b0ac9
+  languageName: node
+  linkType: hard
+
 "@tanstack/query-core@npm:5.90.20":
   version: 5.90.20
   resolution: "@tanstack/query-core@npm:5.90.20"
@@ -4134,6 +4144,7 @@ __metadata:
     "@react-native/eslint-config": "npm:0.83.1"
     "@react-native/metro-config": "npm:0.83.1"
     "@react-native/typescript-config": "npm:0.83.1"
+    "@somesoap/react-native-image-palette": "npm:^1.2.2"
     "@tanstack/react-query": "npm:^5.90.20"
     "@types/jest": "npm:^30.0.0"
     "@types/react": "npm:^19.2.10"

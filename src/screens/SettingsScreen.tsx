@@ -192,7 +192,17 @@ const SettingsScreen = () => {
               label="Gapless Playback"
               value="On"
               isLast
-              onPress={() => { }}
+              onPress={() => {
+                // Demo: Play a track
+                const { play } = require('../store/usePlayerStore').usePlayerStore.getState();
+                play({
+                  id: '1',
+                  title: 'Midnight City',
+                  artist: 'M83',
+                  artwork: 'https://i.scdn.co/image/ab67616d0000b273063fc7d9536c5356e6d30623',
+                  url: ''
+                });
+              }}
             />
           </View>
         </View>
