@@ -14,6 +14,7 @@ const STORAGE_KEYS = {
 class AudioService {
   private static instance: AudioService;
   private initialized = false;
+  private pendingPosition: number | null = null;
 
   private constructor() {}
 
@@ -48,7 +49,14 @@ class AudioService {
     switch (event.type) {
       case AudioProEventType.TRACK_CHANGED:
         this.persistCurrentIndex();
-        this.persistLastTrack(event.track); // track is at root level
+        this.persistLastTrack(event.track);
+
+        // If we have a pending seek from restoration, execute it now that the track is ready
+        if (this.pendingPosition !== null) {
+          const posToSeek = this.pendingPosition;
+          this.pendingPosition = null; // Clear first to avoid double-seek if index changes again
+          AudioPro.seekTo(posToSeek);
+        }
         break;
       case AudioProEventType.PLAYBACK_SPEED_CHANGED:
         if (event.payload?.speed) {
@@ -119,8 +127,12 @@ class AudioService {
                 // Restore position
                 const position = mmkv.getNumber(STORAGE_KEYS.POSITION);
                 if (position && position > 0) {
-                    AudioPro.seekTo(position);
+                    // We store it as pending and seek once TRACK_CHANGED fires.
+                    // This avoids calling seekTo before the player is ready.
+                    this.pendingPosition = position;
                 }
+                
+                AudioPro.skipTo(index);
             }
         }
       }
