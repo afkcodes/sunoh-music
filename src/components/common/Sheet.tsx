@@ -1,4 +1,4 @@
-import { TrueSheet, TrueSheetProps } from '@lodev09/react-native-true-sheet';
+import { SheetDetent, TrueSheet, TrueSheetProps } from '@lodev09/react-native-true-sheet';
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import { useTheme } from '../../theme/ThemeContext';
 
@@ -9,11 +9,11 @@ export interface SheetRef {
 
 interface SheetProps extends Omit<TrueSheetProps, 'ref'> {
   children: React.ReactNode;
-  sizes?: (string | number)[];
+  sizes?: SheetDetent[];
   grabberHeader?: boolean;
 }
 
-export const Sheet = forwardRef<SheetRef, SheetProps>(({ children, ...props }, ref) => {
+export const Sheet = forwardRef<SheetRef, SheetProps>(({ children, sizes, ...props }, ref) => {
   const { colors } = useTheme();
   const sheetRef = useRef<TrueSheet>(null);
 
@@ -27,6 +27,8 @@ export const Sheet = forwardRef<SheetRef, SheetProps>(({ children, ...props }, r
       ref={sheetRef}
       backgroundColor={colors.bgSurface}
       cornerRadius={24}
+      insetAdjustment="never"
+      detents={sizes}
       {...props}
     >
       {children}

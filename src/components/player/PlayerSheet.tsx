@@ -1,16 +1,19 @@
-import { getPalette } from '@somesoap/react-native-image-palette';
-import React, { forwardRef, useEffect, useState } from 'react';
+import React, { forwardRef } from 'react';
 import { Dimensions, Pressable, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TurboImage from 'react-native-turbo-image';
+import { useArtworkTheme } from '../../hooks/useArtworkTheme';
 import { usePlayerStore } from '../../store/usePlayerStore';
 import { useTheme } from '../../theme/ThemeContext';
 import { AppTheme } from '../../theme/types';
 import { makeScalingStyles, useScalingStyles } from '../../utils/style.util';
+import { SafeView } from '../common';
 import { Sheet, SheetRef } from '../common/Sheet';
 import { BillList, Heart, MenuDots, Pause, Play, Repeat, Shuffle, SkipNext, SkipPrevious } from '../common/SolarIcons.generated';
 import { Text } from '../common/Text';
+
+import { AudioProRepeatMode } from 'react-native-audio-pro';
+import { formatTime, useTrackProgress } from '../../hooks/useTrackProgress';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -18,10 +21,23 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
   container: {
     height: SCREEN_HEIGHT,
     backgroundColor: theme.colors.bgSurface,
+
   },
   gradient: {
     flex: 1,
     paddingHorizontal: s.mScale(20),
+    paddingTop: s.vScale(16),
+  },
+  // Header
+  header: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerText: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 14,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
   },
 
 
@@ -29,7 +45,7 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
   artworkContainer: {
     width: '100%',
     aspectRatio: 1,
-    borderRadius: s.mScale(20),
+    borderRadius: theme.borderRadius.lg,
     marginTop: s.vScale(16),
     marginBottom: s.mScale(24),
     shadowColor: '#000',
@@ -42,7 +58,7 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
   artwork: {
     width: '100%',
     height: '100%',
-    borderRadius: s.mScale(20),
+    borderRadius: theme.borderRadius.lg,
   },
   // Info
   infoSection: {
@@ -88,7 +104,6 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: s.mScale(8),
     marginBottom: s.mScale(32),
   },
   playButton: {
@@ -120,8 +135,6 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
   footerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: s.mScale(40),
-    marginBottom: s.mScale(16),
   },
   footerButton: {
     width: s.mScale(48),
@@ -133,138 +146,167 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
 
 export const PlayerSheet = forwardRef<SheetRef, {}>((_, ref) => {
   const theme = useTheme();
-  const { colors } = theme;
   const styles = useScalingStyles(createStyles, theme);
-  const insets = useSafeAreaInsets();
-  const { currentTrack, isPlaying, togglePlayPause } = usePlayerStore();
-  const [gradientColors, setGradientColors] = useState<string[]>([colors.bgSurface, colors.bgPage]);
-
-  // Extract colors from artwork
-  useEffect(() => {
-    if (currentTrack?.artwork) {
-      getPalette(currentTrack.artwork, {
-        fallbackColor: colors.bgSurface,
-      })
-        .then((palette) => {
-          if (palette.vibrant) {
-            setGradientColors([palette.vibrant, colors.bgPage]);
-          }
-        })
-        .catch((e) => {
-          console.warn('Failed to extract palette', e);
-        });
-    }
-  }, [currentTrack, colors.bgPage, colors.bgSurface]);
+  const {
+    currentTrack,
+    isPlaying,
+    togglePlayPause,
+    next,
+    previous,
+    repeatMode,
+    shuffleMode,
+    setRepeatMode,
+    setShuffleMode,
+    // seekTo - implement later
+  } = usePlayerStore();
+  const { playerTheme, gradientColors } = useArtworkTheme(currentTrack?.artwork);
+  const { position, duration } = useTrackProgress();
 
   if (!currentTrack) return null;
+
+  const progressPercent = duration > 0 ? (position / duration) * 100 : 0;
+
+  const toggleRepeat = () => {
+    // Cycle: OFF -> ALL -> ONE -> OFF
+    if (repeatMode === AudioProRepeatMode.OFF) setRepeatMode(AudioProRepeatMode.ALL);
+    else if (repeatMode === AudioProRepeatMode.ALL) setRepeatMode(AudioProRepeatMode.ONE);
+    else setRepeatMode(AudioProRepeatMode.OFF);
+  };
 
   return (
     <Sheet
       ref={ref}
-      detents={[1.0]}
-      cornerRadius={32}
-      grabberHeader={false}
+      sizes={[1]}
+      cornerRadius={theme.borderRadius.lg}
+      grabber={false}
     >
+
       <View style={styles.container}>
         <LinearGradient
-          colors={[
-            gradientColors[0],
-            colors.bgPage
-          ]}
-          style={[styles.gradient, { paddingTop: insets.top + 8 }]}
+          colors={[...gradientColors, theme.colors.bgPage,]}
+          style={[styles.gradient]}
         >
+          <SafeView backgroundColor='transparent'>
+            {/* Header */}
+            <View style={styles.header}>
+              <Text style={styles.headerText} variant="h1">NOW PLAYING</Text>
+            </View>
 
-          {/* Artwork */}
-          <View style={styles.artworkContainer}>
-            <TurboImage source={{ uri: currentTrack.artwork }} style={styles.artwork} />
-          </View>
+            {/* Artwork */}
+            <View style={styles.artworkContainer}>
+              <TurboImage source={{ uri: currentTrack.artwork }} style={styles.artwork} />
+            </View>
 
-          {/* Info */}
-          <View style={styles.infoSection}>
-            <View style={styles.titleContainer}>
-              <Text
-                variant="h2"
-                numberOfLines={1}
-                style={{
-                  fontSize: 28,
-                  fontWeight: '700',
-                  color: '#FFF',
-                  marginBottom: 6,
-                  letterSpacing: -0.5
+            {/* Info */}
+            <View style={styles.infoSection}>
+              <View style={styles.titleContainer}>
+                <Text
+                  variant="h2"
+                  numberOfLines={1}
+                  style={{
+                    fontSize: 28,
+                    fontWeight: '700',
+                    color: playerTheme?.onSurface || '#FFF',
+                    marginBottom: 6,
+                    letterSpacing: -0.5
+                  }}
+                >
+                  {currentTrack.title}
+                </Text>
+                <Text
+                  variant="body"
+                  numberOfLines={1}
+                  style={{
+                    fontSize: 18,
+                    fontWeight: '500',
+                    color: playerTheme?.onSurfaceVariant || 'rgba(255, 255, 255, 0.65)'
+                  }}
+                >
+                  {currentTrack.artist}
+                </Text>
+              </View>
+              <Pressable style={styles.heartButton}>
+                <Heart size={26} color={playerTheme?.primary || "rgba(255, 255, 255, 0.8)"} />
+              </Pressable>
+            </View>
+
+            {/* Progress */}
+            <View style={styles.progressContainer}>
+              <Pressable
+                onPressIn={(e) => {
+                  const { locationX } = e.nativeEvent;
+                  // Placeholder for seek logic
+                  console.log(`Seek to position: ${locationX}`);
+                  // if (width > 0) seekTo((locationX / width) * duration);
                 }}
-              >
-                {currentTrack.title}
-              </Text>
-              <Text
-                variant="body"
-                numberOfLines={1}
-                style={{
-                  fontSize: 18,
-                  fontWeight: '500',
-                  color: 'rgba(255, 255, 255, 0.65)'
+                onLayout={(e) => {
+                  // Placeholder for layout capture
+                  console.log(`Progress bar width: ${e.nativeEvent.layout.width}`);
                 }}
+                style={[styles.progressBarBg, playerTheme && { backgroundColor: playerTheme.surfaceVariant }]}
               >
-                {currentTrack.artist}
-              </Text>
+                <View style={[styles.progressBarFill, playerTheme && { backgroundColor: playerTheme.primary, width: `${progressPercent}%` }]} />
+              </Pressable>
+
+              {/* Seeking interaction is tricky with just Views. 
+                  Ideally we replace this with @react-native-community/slider or similar.
+                  For now we just suppress the unused seekTo warning by using it in a dummy function or leaving it for now.
+               */}
+
+              <View style={styles.timeRow}>
+                <Text variant="caption" style={{ color: playerTheme?.onSurfaceVariant || 'rgba(255, 255, 255, 0.5)', fontSize: 13, fontWeight: '500' }}>
+                  {formatTime(position)}
+                </Text>
+                <Text variant="caption" style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 13, fontWeight: '500' }}>
+                  {formatTime(duration)}
+                </Text>
+              </View>
             </View>
-            <Pressable style={styles.heartButton}>
-              <Heart size={26} color="rgba(255, 255, 255, 0.8)" />
-            </Pressable>
-          </View>
 
-          {/* Progress */}
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBarBg}>
-              <View style={styles.progressBarFill} />
+            {/* Controls */}
+            <View style={styles.controlsRow}>
+              <Pressable style={styles.secondaryControlButton} onPress={() => setShuffleMode(!shuffleMode)}>
+                <Shuffle size={22} color={shuffleMode ? (playerTheme?.primary || "#FFF") : (playerTheme?.onSurfaceVariant || "rgba(255, 255, 255, 0.75)")} />
+              </Pressable>
+
+              <Pressable style={styles.controlButton} onPress={previous}>
+                <SkipPrevious size={38} color={playerTheme?.onSurface || "#FFF"} />
+              </Pressable>
+
+              <Pressable
+                style={[
+                  styles.playButton,
+                  playerTheme && { backgroundColor: playerTheme.primaryContainer }
+                ]}
+                onPress={togglePlayPause}
+              >
+                {isPlaying ? (
+                  <Pause size={44} color={playerTheme?.onPrimaryContainer || '#000'} />
+                ) : (
+                  <Play size={44} color={playerTheme?.onPrimaryContainer || '#000'} />
+                )}
+              </Pressable>
+
+              <Pressable style={styles.controlButton} onPress={next}>
+                <SkipNext size={38} color={playerTheme?.onSurface || "#FFF"} />
+              </Pressable>
+
+              <Pressable style={styles.secondaryControlButton} onPress={toggleRepeat}>
+                <Repeat size={22} color={repeatMode !== AudioProRepeatMode.OFF ? (playerTheme?.primary || "#FFF") : (playerTheme?.onSurfaceVariant || "rgba(255, 255, 255, 0.75)")} />
+              </Pressable>
             </View>
-            <View style={styles.timeRow}>
-              <Text variant="caption" style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 13, fontWeight: '500' }}>
-                1:24
-              </Text>
-              <Text variant="caption" style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 13, fontWeight: '500' }}>
-                3:42
-              </Text>
+
+            {/* Footer - Queue & Menu */}
+            <View style={styles.footerRow}>
+              <Pressable style={styles.footerButton}>
+                <BillList size={26} color={playerTheme?.onSurfaceVariant || "rgba(255, 255, 255, 0.8)"} />
+              </Pressable>
+
+              <Pressable style={styles.footerButton}>
+                <MenuDots size={26} color={playerTheme?.onSurfaceVariant || "rgba(255, 255, 255, 0.8)"} />
+              </Pressable>
             </View>
-          </View>
-
-          {/* Controls */}
-          <View style={styles.controlsRow}>
-            <Pressable style={styles.secondaryControlButton}>
-              <Shuffle size={22} color="rgba(255, 255, 255, 0.75)" />
-            </Pressable>
-
-            <Pressable style={styles.controlButton} onPress={() => { }}>
-              <SkipPrevious size={38} color="#FFF" />
-            </Pressable>
-
-            <Pressable style={styles.playButton} onPress={togglePlayPause}>
-              {isPlaying ? (
-                <Pause size={44} color={gradientColors[0] ?? colors.primaryBase} />
-              ) : (
-                <Play size={44} color={gradientColors[0] ?? colors.primaryBase} />
-              )}
-            </Pressable>
-
-            <Pressable style={styles.controlButton} onPress={() => { }}>
-              <SkipNext size={38} color="#FFF" />
-            </Pressable>
-
-            <Pressable style={styles.secondaryControlButton}>
-              <Repeat size={22} color="rgba(255, 255, 255, 0.75)" />
-            </Pressable>
-          </View>
-
-          {/* Footer - Queue & Menu */}
-          <View style={styles.footerRow}>
-            <Pressable style={styles.footerButton}>
-              <BillList size={26} color="rgba(255, 255, 255, 0.8)" />
-            </Pressable>
-
-            <Pressable style={styles.footerButton}>
-              <MenuDots size={26} color="rgba(255, 255, 255, 0.8)" />
-            </Pressable>
-          </View>
-
+          </SafeView>
         </LinearGradient>
       </View>
     </Sheet>

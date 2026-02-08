@@ -89,5 +89,8 @@
   "java.configuration.updateBuildConfiguration": "automatic",
   "[typescriptreact]": {
     "editor.defaultFormatter": "vscode.typescript-language-features"
-  }
+  },
+  "java.project.sourcePaths": [
+    ""
+  ]
 }

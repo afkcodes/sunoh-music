@@ -40,7 +40,8 @@
       "@utils/*": ["src/utils/*"],
       "@theme/*": ["src/theme/*"],
       "@types/*": ["src/types/*"],
-      "@assets/*": ["src/assets/*"]
+      "@assets/*": ["src/assets/*"],
+      "react-native-audio-pro": ["node_modules/react-native-audio-pro/src/index"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx"],

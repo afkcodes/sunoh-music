@@ -25,3 +25,4 @@ module.exports = {
    'react-native-worklets/plugin',
   ],
 };
+// bjectdarkMuted: "#181010"darkVibrant: "#800808"dominantAndroid: "#181010"lightMuted: "#C0C0C0"lightVibrant: "#18181B"muted: "#787878"vibrant: "#08B0D0"[[Prototype]]: Object

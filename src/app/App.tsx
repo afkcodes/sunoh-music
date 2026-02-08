@@ -17,14 +17,15 @@ import { Tabs } from './navigation/Tabs';
 const queryClient = new QueryClient();
 
 function AppContent() {
-  const { isDark, colors } = useTheme();
+  const { isDark } = useTheme();
   const playerSheetRef = useRef<SheetRef>(null);
 
   return (
     <>
       <StatusBar
         barStyle={isDark ? 'light-content' : 'dark-content'}
-        backgroundColor={colors.bgPage}
+        backgroundColor="transparent"
+        translucent={true}
       />
       <NavigationHandler stateNavigator={rootNavigator}>
         <NavigationStack>

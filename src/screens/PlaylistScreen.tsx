@@ -594,6 +594,7 @@ export const PlaylistScreen: React.FC = () => {
         ListHeaderComponent={listHeader}
         ListFooterComponent={listFooter}
         recycleItems={true}
+        contentContainerStyle={{ paddingBottom: 100 }}
       />
     </SafeView>
   );

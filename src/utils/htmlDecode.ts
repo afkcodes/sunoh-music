@@ -6,6 +6,9 @@
  * - Hex entities (&#x27;, &#x22;, etc.)
  */
 export const decodeHtmlEntities = (text: string): string => {
+  if (typeof text !== 'string') {
+    return '';
+  }
   // Named entities map
   const namedEntities: Record<string, string> = {
     '&quot;': '"',

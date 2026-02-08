@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@legendapp/list": "^2.0.19",
-    "@lodev09/react-native-true-sheet": "^3.8.2",
+    "@lodev09/react-native-true-sheet": "patch:@lodev09/react-native-true-sheet@npm%3A3.8.2#~/.yarn/patches/@lodev09-react-native-true-sheet-npm-3.8.2-1cf7a822fc.patch",
     "@somesoap/react-native-image-palette": "^1.2.2",
     "@tanstack/react-query": "^5.90.20",
     "navigation": "^6.3.1",
@@ -19,6 +19,7 @@
     "navigation-react-native": "^9.35.2",
     "react": "19.2.4",
     "react-native": "0.83.1",
+    "react-native-audio-pro": "github:afkcodes/react-native-audio-pro#feature/native-queue",
     "react-native-device-info": "^15.0.1",
     "react-native-fast-squircle": "^1.1.1",
     "react-native-fs": "^2.20.0",

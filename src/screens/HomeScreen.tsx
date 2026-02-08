@@ -19,7 +19,7 @@ const createStyles = makeScalingStyles((s, colors: ThemeColors) => ({
         backgroundColor: colors.bgPage,
     },
     scrollContent: {
-        paddingBottom: s.mScale(spacing.lg),
+        paddingBottom: s.vScale(80),
     },
     center: {
         flex: 1,
@@ -50,7 +50,7 @@ const HomeScreen = () => {
     }
 
     return (
-        <SafeView style={styles.container}>
+        <SafeView style={styles.container} >
             <Animated.View style={{ flex: 1 }} entering={FadeIn.duration(400)}>
                 <ScrollView
                     contentContainerStyle={styles.scrollContent}

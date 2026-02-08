@@ -1,0 +1,13 @@
+diff --git a/android/src/main/java/com/lodev09/truesheet/TrueSheetViewController.kt b/android/src/main/java/com/lodev09/truesheet/TrueSheetViewController.kt
+index e547072cb03ddf1fdfa8270a1ac8e3546a6d3e4f..b2278094034ef83ea7ab997b4f5e94944d823db6 100644
+--- a/android/src/main/java/com/lodev09/truesheet/TrueSheetViewController.kt
++++ b/android/src/main/java/com/lodev09/truesheet/TrueSheetViewController.kt
+@@ -264,7 +264,7 @@ class TrueSheetViewController(private val reactContext: ThemedReactContext) :
+     get() = if (edgeToEdgeEnabled) ScreenUtils.getInsets(reactContext).bottom else 0
+ 
+   val topInset: Int
+-    get() = if (edgeToEdgeEnabled) ScreenUtils.getInsets(reactContext).top else 0
++    get() = if (edgeToEdgeEnabled && insetAdjustment == "automatic") ScreenUtils.getInsets(reactContext).top else 0
+ 
+   override val contentBottomInset: Int
+     get() = if (insetAdjustment == "automatic") bottomInset else 0

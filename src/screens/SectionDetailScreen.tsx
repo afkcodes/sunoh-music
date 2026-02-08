@@ -36,7 +36,7 @@ const createStyles = makeScalingStyles((s, colors: ThemeColors) => ({
   },
   listContent: {
     paddingHorizontal: s.mScale(spacing.lg),
-    paddingBottom: s.mScale(spacing.xl),
+    paddingBottom: s.mScale(100),
   },
   itemContainer: {
     width: '50%',
@@ -145,9 +145,11 @@ export const SectionDetailScreen: React.FC = () => {
             />
           )}
           keyExtractor={(item, index) => (item.heading || 'section') + index}
-          contentContainerStyle={{ paddingBottom: 40 }}
+          contentContainerStyle={{ paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
           estimatedItemSize={250}
+          renderToHardwareTextureAndroid
+          recycleItems
         />
       );
     }
@@ -161,6 +163,8 @@ export const SectionDetailScreen: React.FC = () => {
         numColumns={NUM_COLUMNS}
         showsVerticalScrollIndicator={false}
         estimatedItemSize={220}
+        renderToHardwareTextureAndroid
+        recycleItems
       />
     );
   };
