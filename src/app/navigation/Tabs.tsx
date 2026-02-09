@@ -1,6 +1,8 @@
 import { NavigationHandler } from 'navigation-react';
 import { NavigationStack, Scene, TabBar, TabBarItem } from 'navigation-react-native';
 import React from 'react';
+import { useArtworkTheme } from '../../hooks/useArtworkTheme';
+import { usePlayer } from '../../store/usePlayerStore';
 import { useTheme } from '../../theme/ThemeContext';
 import { homeNavigator, libraryNavigator, searchNavigator } from './navigators';
 import { Routes } from './routes';
@@ -21,18 +23,23 @@ const LibraryIcon = require('../../assets/images/library.png');
 
 export const Tabs = () => {
   const { colors } = useTheme();
-  // We can use the theme to style the TabBar, though native limitations apply.
-  // navigation-react-native picks up system colors usually, or props can be added.
+  const { currentTrack } = usePlayer();
+  const { playerTheme, gradientColors } = useArtworkTheme(currentTrack?.artwork);
+
+  // Dynamic colors based on artwork, falling back to theme colors
+  const barTintColor = currentTrack ? (gradientColors[1] || colors.bgSurface) : colors.bgSurface;
+  const selectedTintColor = playerTheme?.primary || colors.primaryBase;
+  const activeIndicatorColor = playerTheme ? `${playerTheme.primary}20` : `${colors.primaryBase}20`;
 
   return (
     <TabBar
       primary={true}
       bottomTabs={true}
-      barTintColor={colors.bgSurface as string}
-      selectedTintColor={colors.primaryBase as string}
-      activeIndicatorColor={`${colors.primaryBase}20`}
+      barTintColor={barTintColor as string}
+      selectedTintColor={selectedTintColor as string}
+      activeIndicatorColor={activeIndicatorColor}
       unselectedTintColor={colors.textSecondary as string}
-      labelVisibilityMode='labeled'
+      labelVisibilityMode="labeled"
     >
       <TabBarItem
         title="Home"

@@ -28,12 +28,14 @@ import {
 import { Text } from '../components/common/Text';
 import { HomeSection } from '../components/home/HomeSection';
 import { usePlaylistData } from '../hooks/usePlaylistData';
+import { usePlayerStore } from '../store/usePlayerStore';
 import { borderRadius, fontNames, spacing, ThemeColors } from '../theme';
 import { useTheme } from '../theme/ThemeContext';
 import { Song } from '../types/album';
 import { decodeHtmlEntities } from '../utils/htmlDecode';
 import { getMediaItemProps } from '../utils/media';
 import { makeScalingStyles, useScaling, useScalingStyles } from '../utils/style.util';
+import { mapSongToTrack } from '../utils/trackMapping';
 
 const HEADER_SCROLL_DISTANCE = 360;
 
@@ -410,15 +412,32 @@ export const PlaylistScreen: React.FC = () => {
   // MEMOIZED CALLBACKS
   // ============================================================================
 
+  const { playQueue } = usePlayerStore();
+
   const handlePlaySong = useCallback((song: Song) => {
     console.log('Play song:', song.title);
-    // TODO: Implement playback
-  }, []);
+
+    // 1. Get all songs as tracks
+    const allSongs = finalPlaylist?.songs || finalPlaylist?.list || [];
+    const tracks = allSongs.map(mapSongToTrack);
+
+    // 2. Find index of clicked song
+    const index = tracks.findIndex((t: any) => t.id === song.id);
+
+    // 3. Play queue starting from index
+    if (index !== -1) {
+      playQueue(tracks, index);
+    }
+  }, [finalPlaylist, playQueue]);
 
   const handlePlayAll = useCallback(() => {
     console.log('Play all songs');
-    // TODO: Implement play all
-  }, []);
+    const allSongs = finalPlaylist?.songs || finalPlaylist?.list || [];
+    if (allSongs.length > 0) {
+      const tracks = allSongs.map(mapSongToTrack);
+      playQueue(tracks, 0);
+    }
+  }, [finalPlaylist, playQueue]);
 
   const handleBack = useCallback(() => {
     stateNavigator.navigateBack(1);

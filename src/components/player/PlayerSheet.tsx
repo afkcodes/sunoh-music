@@ -1,9 +1,10 @@
-import React, { forwardRef } from 'react';
+import { Slider } from '@react-native-assets/slider';
+import React, { forwardRef, useCallback, useMemo, useState } from 'react';
 import { Dimensions, Pressable, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import TurboImage from 'react-native-turbo-image';
 import { useArtworkTheme } from '../../hooks/useArtworkTheme';
-import { usePlayerStore } from '../../store/usePlayerStore';
+import { usePlayer } from '../../store/usePlayerStore';
 import { useTheme } from '../../theme/ThemeContext';
 import { AppTheme } from '../../theme/types';
 import { makeScalingStyles, useScalingStyles } from '../../utils/style.util';
@@ -21,14 +22,12 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
   container: {
     height: SCREEN_HEIGHT,
     backgroundColor: theme.colors.bgSurface,
-
   },
   gradient: {
     flex: 1,
     paddingHorizontal: s.mScale(20),
     paddingTop: s.vScale(16),
   },
-  // Header
   header: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -39,9 +38,6 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
     letterSpacing: 2,
     textTransform: 'uppercase',
   },
-
-
-  // Artwork
   artworkContainer: {
     width: '100%',
     aspectRatio: 1,
@@ -60,7 +56,6 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
     height: '100%',
     borderRadius: theme.borderRadius.lg,
   },
-  // Info
   infoSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -77,29 +72,18 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  // Progress
   progressContainer: {
     marginBottom: s.mScale(28),
   },
-  progressBarBg: {
-    height: s.mScale(5),
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: s.mScale(2.5),
+  progressBar: {
     width: '100%',
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: '#FFF',
-    borderRadius: s.mScale(2.5),
-    width: '35%',
+    height: s.mScale(20),
   },
   timeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: s.mScale(8),
   },
-  // Controls
   controlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -131,7 +115,6 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  // Footer
   footerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -141,7 +124,22 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
     height: s.mScale(48),
     justifyContent: 'center',
     alignItems: 'center',
-  }
+  },
+  // Pre-computed text styles (no more inline objects)
+  trackTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: 6,
+    letterSpacing: -0.5,
+  },
+  trackArtist: {
+    fontSize: 18,
+    fontWeight: '500',
+  },
+  timeText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
 }));
 
 export const PlayerSheet = forwardRef<SheetRef, {}>((_, ref) => {
@@ -153,25 +151,67 @@ export const PlayerSheet = forwardRef<SheetRef, {}>((_, ref) => {
     togglePlayPause,
     next,
     previous,
+    seekTo,
     repeatMode,
     shuffleMode,
     setRepeatMode,
     setShuffleMode,
-    // seekTo - implement later
-  } = usePlayerStore();
+  } = usePlayer();
   const { playerTheme, gradientColors } = useArtworkTheme(currentTrack?.artwork);
   const { position, duration } = useTrackProgress();
 
-  if (!currentTrack) return null;
+  const [isSeeking, setIsSeeking] = useState(false);
+  const [seekPosition, setSeekPosition] = useState(0);
+  const [isSheetGestureEnabled, setIsSheetGestureEnabled] = useState(true);
 
-  const progressPercent = duration > 0 ? (position / duration) * 100 : 0;
+  // Pure state machine: either dragging (use seekPosition) or idle (use position)
+  const displayPosition = isSeeking ? seekPosition : position;
 
-  const toggleRepeat = () => {
-    // Cycle: OFF -> ALL -> ONE -> OFF
+  const handleSlidingStart = useCallback(() => {
+    setIsSeeking(true);
+    setSeekPosition(position);
+    setIsSheetGestureEnabled(false);
+  }, [position]);
+
+  const handleValueChange = useCallback((value: number) => {
+    setSeekPosition(value);
+  }, []);
+
+  const handleSlidingComplete = useCallback((value: number) => {
+    setIsSeeking(false);
+    setIsSheetGestureEnabled(true);
+    seekTo(value);
+  }, [seekTo]);
+
+  const toggleRepeat = useCallback(() => {
     if (repeatMode === AudioProRepeatMode.OFF) setRepeatMode(AudioProRepeatMode.ALL);
     else if (repeatMode === AudioProRepeatMode.ALL) setRepeatMode(AudioProRepeatMode.ONE);
     else setRepeatMode(AudioProRepeatMode.OFF);
-  };
+  }, [repeatMode, setRepeatMode]);
+
+  const toggleShuffle = useCallback(() => {
+    setShuffleMode(!shuffleMode);
+  }, [shuffleMode, setShuffleMode]);
+
+  // Memoised dynamic styles that depend on playerTheme
+  const titleStyle = useMemo(
+    () => [styles.trackTitle, { color: playerTheme?.onSurface ?? '#FFF' }],
+    [styles.trackTitle, playerTheme?.onSurface],
+  );
+  const artistStyle = useMemo(
+    () => [styles.trackArtist, { color: playerTheme?.onSurfaceVariant ?? 'rgba(255, 255, 255, 0.65)' }],
+    [styles.trackArtist, playerTheme?.onSurfaceVariant],
+  );
+  const timeStyle = useMemo(
+    () => [styles.timeText, { color: playerTheme?.onSurfaceVariant ?? 'rgba(255, 255, 255, 0.5)' }],
+    [styles.timeText, playerTheme?.onSurfaceVariant],
+  );
+  const playBtnStyle = useMemo(
+    () => [styles.playButton, playerTheme && { backgroundColor: playerTheme.primaryContainer }],
+    [styles.playButton, playerTheme],
+  );
+
+  if (!currentTrack) return null;
 
   return (
     <Sheet
@@ -179,14 +219,14 @@ export const PlayerSheet = forwardRef<SheetRef, {}>((_, ref) => {
       sizes={[1]}
       cornerRadius={theme.borderRadius.lg}
       grabber={false}
+      dismissible={isSheetGestureEnabled}
     >
-
       <View style={styles.container}>
         <LinearGradient
-          colors={[...gradientColors, theme.colors.bgPage,]}
-          style={[styles.gradient]}
+          colors={[...gradientColors, theme.colors.bgPage]}
+          style={styles.gradient}
         >
-          <SafeView backgroundColor='transparent'>
+          <SafeView backgroundColor="transparent">
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.headerText} variant="h1">NOW PLAYING</Text>
@@ -200,64 +240,40 @@ export const PlayerSheet = forwardRef<SheetRef, {}>((_, ref) => {
             {/* Info */}
             <View style={styles.infoSection}>
               <View style={styles.titleContainer}>
-                <Text
-                  variant="h2"
-                  numberOfLines={1}
-                  style={{
-                    fontSize: 28,
-                    fontWeight: '700',
-                    color: playerTheme?.onSurface || '#FFF',
-                    marginBottom: 6,
-                    letterSpacing: -0.5
-                  }}
-                >
+                <Text variant="h2" numberOfLines={1} style={titleStyle}>
                   {currentTrack.title}
                 </Text>
-                <Text
-                  variant="body"
-                  numberOfLines={1}
-                  style={{
-                    fontSize: 18,
-                    fontWeight: '500',
-                    color: playerTheme?.onSurfaceVariant || 'rgba(255, 255, 255, 0.65)'
-                  }}
-                >
+                <Text variant="body" numberOfLines={1} style={artistStyle}>
                   {currentTrack.artist}
                 </Text>
               </View>
               <Pressable style={styles.heartButton}>
-                <Heart size={26} color={playerTheme?.primary || "rgba(255, 255, 255, 0.8)"} />
+                <Heart size={26} color={playerTheme?.primary ?? 'rgba(255, 255, 255, 0.8)'} />
               </Pressable>
             </View>
 
             {/* Progress */}
-            <View style={styles.progressContainer}>
-              <Pressable
-                onPressIn={(e) => {
-                  const { locationX } = e.nativeEvent;
-                  // Placeholder for seek logic
-                  console.log(`Seek to position: ${locationX}`);
-                  // if (width > 0) seekTo((locationX / width) * duration);
-                }}
-                onLayout={(e) => {
-                  // Placeholder for layout capture
-                  console.log(`Progress bar width: ${e.nativeEvent.layout.width}`);
-                }}
-                style={[styles.progressBarBg, playerTheme && { backgroundColor: playerTheme.surfaceVariant }]}
-              >
-                <View style={[styles.progressBarFill, playerTheme && { backgroundColor: playerTheme.primary, width: `${progressPercent}%` }]} />
-              </Pressable>
+            <View style={styles.progressContainer} >
+              <Slider
+                style={styles.progressBar}
+                value={displayPosition}
+                minimumValue={0}
+                maximumValue={duration || 1}
+                minimumTrackTintColor={playerTheme?.primary ?? '#FFF'}
+                maximumTrackTintColor={playerTheme?.surfaceVariant ?? 'rgba(255, 255, 255, 0.15)'}
+                thumbTintColor={playerTheme?.primary ?? '#FFF'} trackHeight={5}
+                thumbSize={15}
+                slideOnTap={true} onSlidingStart={handleSlidingStart}
+                onValueChange={handleValueChange}
+                onSlidingComplete={handleSlidingComplete}
+              />
 
-              {/* Seeking interaction is tricky with just Views. 
-                  Ideally we replace this with @react-native-community/slider or similar.
-                  For now we just suppress the unused seekTo warning by using it in a dummy function or leaving it for now.
-               */}
 
               <View style={styles.timeRow}>
-                <Text variant="caption" style={{ color: playerTheme?.onSurfaceVariant || 'rgba(255, 255, 255, 0.5)', fontSize: 13, fontWeight: '500' }}>
-                  {formatTime(position)}
+                <Text variant="caption" style={timeStyle}>
+                  {formatTime(displayPosition)}
                 </Text>
-                <Text variant="caption" style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 13, fontWeight: '500' }}>
+                <Text variant="caption" style={timeStyle}>
                   {formatTime(duration)}
                 </Text>
               </View>
@@ -265,45 +281,38 @@ export const PlayerSheet = forwardRef<SheetRef, {}>((_, ref) => {
 
             {/* Controls */}
             <View style={styles.controlsRow}>
-              <Pressable style={styles.secondaryControlButton} onPress={() => setShuffleMode(!shuffleMode)}>
-                <Shuffle size={22} color={shuffleMode ? (playerTheme?.primary || "#FFF") : (playerTheme?.onSurfaceVariant || "rgba(255, 255, 255, 0.75)")} />
+              <Pressable style={styles.secondaryControlButton} onPress={toggleShuffle}>
+                <Shuffle size={22} color={shuffleMode ? (playerTheme?.primary ?? '#FFF') : (playerTheme?.onSurfaceVariant ?? 'rgba(255, 255, 255, 0.75)')} />
               </Pressable>
 
               <Pressable style={styles.controlButton} onPress={previous}>
-                <SkipPrevious size={38} color={playerTheme?.onSurface || "#FFF"} />
+                <SkipPrevious size={38} color={playerTheme?.onSurface ?? '#FFF'} />
               </Pressable>
 
-              <Pressable
-                style={[
-                  styles.playButton,
-                  playerTheme && { backgroundColor: playerTheme.primaryContainer }
-                ]}
-                onPress={togglePlayPause}
-              >
+              <Pressable style={playBtnStyle} onPress={togglePlayPause}>
                 {isPlaying ? (
-                  <Pause size={44} color={playerTheme?.onPrimaryContainer || '#000'} />
+                  <Pause size={44} color={playerTheme?.onPrimaryContainer ?? '#000'} />
                 ) : (
-                  <Play size={44} color={playerTheme?.onPrimaryContainer || '#000'} />
+                  <Play size={44} color={playerTheme?.onPrimaryContainer ?? '#000'} />
                 )}
               </Pressable>
 
               <Pressable style={styles.controlButton} onPress={next}>
-                <SkipNext size={38} color={playerTheme?.onSurface || "#FFF"} />
+                <SkipNext size={38} color={playerTheme?.onSurface ?? '#FFF'} />
               </Pressable>
 
               <Pressable style={styles.secondaryControlButton} onPress={toggleRepeat}>
-                <Repeat size={22} color={repeatMode !== AudioProRepeatMode.OFF ? (playerTheme?.primary || "#FFF") : (playerTheme?.onSurfaceVariant || "rgba(255, 255, 255, 0.75)")} />
+                <Repeat size={22} color={repeatMode !== AudioProRepeatMode.OFF ? (playerTheme?.primary ?? '#FFF') : (playerTheme?.onSurfaceVariant ?? 'rgba(255, 255, 255, 0.75)')} />
               </Pressable>
             </View>
 
-            {/* Footer - Queue & Menu */}
+            {/* Footer */}
             <View style={styles.footerRow}>
               <Pressable style={styles.footerButton}>
-                <BillList size={26} color={playerTheme?.onSurfaceVariant || "rgba(255, 255, 255, 0.8)"} />
+                <BillList size={26} color={playerTheme?.onSurfaceVariant ?? 'rgba(255, 255, 255, 0.8)'} />
               </Pressable>
-
               <Pressable style={styles.footerButton}>
-                <MenuDots size={26} color={playerTheme?.onSurfaceVariant || "rgba(255, 255, 255, 0.8)"} />
+                <MenuDots size={26} color={playerTheme?.onSurfaceVariant ?? 'rgba(255, 255, 255, 0.8)'} />
               </Pressable>
             </View>
           </SafeView>

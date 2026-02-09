@@ -37,6 +37,7 @@ export const mapSongToTrack = (song: Song): AudioProTrack => {
     artwork: artwork,
     album: decodeHtmlEntities(albumName || ''),
     duration: parseInt(song.duration || '0', 10) * 1000,
-    // Custom props if needed
-  };
+    // Include source for URL refresh strategy (Gaana URLs expire)
+    source: song.source || 'saavn',
+  } as AudioProTrack & { source: string };
 };

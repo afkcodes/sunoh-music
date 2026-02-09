@@ -1,23 +1,19 @@
-import React from 'react';
-import { Pressable, View } from 'react-native';
+import React, { memo, useCallback, useMemo } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TurboImage from 'react-native-turbo-image';
 import { useArtworkTheme } from '../../hooks/useArtworkTheme';
 import { useTrackProgress } from '../../hooks/useTrackProgress';
-import { usePlayerStore } from '../../store/usePlayerStore';
+import { usePlayer } from '../../store/usePlayerStore';
 import { useTheme } from '../../theme/ThemeContext';
 import { AppTheme } from '../../theme/types';
 import { makeScalingStyles, useScalingStyles } from '../../utils/style.util';
 import { Pause, Play, SkipNext } from '../common/SolarIcons.generated';
 import { Text } from '../common/Text';
 
-// Dummy progress bar for visual -> Real progress bar
-const ProgressBar = ({ progress = 0, color }: { progress?: number, color: string }) => (
-  <View style={{ height: 2, backgroundColor: color + '30', width: '100%', position: 'absolute', top: 0 }}>
-    <View style={{ height: '100%', backgroundColor: color, width: `${progress * 100}%` }} />
-  </View>
-);
+const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
 const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
   container: {
@@ -25,6 +21,13 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
     width: '100%',
     backgroundColor: theme.colors.bgSurface,
     overflow: 'hidden',
+  },
+  gradientContainer: {
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  progressBar: {
+    ...StyleSheet.absoluteFillObject,
   },
   innerContainer: {
     flexDirection: 'row',
@@ -47,7 +50,7 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: s.mScale(20), // More breathing room
+    gap: s.mScale(20),
   },
   playButton: {
     width: s.mScale(44),
@@ -56,82 +59,134 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
-  }
+  },
+  title: {
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  subtitle: {
+    fontWeight: '500',
+  },
 }));
 
-export const MiniPlayer = ({ onPress }: { onPress?: () => void }) => {
+export const MiniPlayer = memo(({ onPress }: { onPress?: () => void }) => {
   const { colors, scale: s } = useTheme();
   const theme = { colors, scale: s } as AppTheme;
   const styles = useScalingStyles(createStyles, theme);
-  const { currentTrack, isPlaying, togglePlayPause, next } = usePlayerStore();
+  const { currentTrack, isPlaying, togglePlayPause, next } = usePlayer();
   const insets = useSafeAreaInsets();
   const { playerTheme, gradientColors } = useArtworkTheme(currentTrack?.artwork);
   const { position, duration } = useTrackProgress();
 
   const progress = duration > 0 ? position / duration : 0;
+  const miniPlayerBottomOffset = 80 + insets.bottom;
 
-  // Total distance from screen bottom = Tab Bar + System Insets
-  const miniPlayerBottomOffset = 80 + insets.bottom
+  // Animated progress overlay that reveals from right to left
+  const progressBarStyle = useAnimatedStyle(() => {
+    'worklet';
+    return {
+      right: `${100 - progress * 100}%`,
+    };
+  }, [progress]);
+
+  const handlePlayPause = useCallback((e: { stopPropagation: () => void }) => {
+    e.stopPropagation();
+    togglePlayPause();
+  }, [togglePlayPause]);
+
+  const handleNext = useCallback((e: { stopPropagation: () => void }) => {
+    e.stopPropagation();
+    next();
+  }, [next]);
+
+  const titleStyle = useMemo(
+    () => [styles.title, { color: playerTheme?.onSurface ?? colors.textPrimary }],
+    [styles.title, playerTheme?.onSurface, colors.textPrimary],
+  );
+  const subtitleStyle = useMemo(
+    () => [styles.subtitle, { color: playerTheme?.onSurfaceVariant ?? colors.textSecondary }],
+    [styles.subtitle, playerTheme?.onSurfaceVariant, colors.textSecondary],
+  );
+  const playBtnStyle = useMemo(
+    () => [styles.playButton, playerTheme && { backgroundColor: playerTheme.primaryContainer }],
+    [styles.playButton, playerTheme],
+  );
+
+  // Rich progress overlay gradient with dynamic theming
+  const progressGradient = useMemo(() => {
+    const primary = playerTheme?.primary ?? colors.primaryBase;
+    const primaryRgb = primary.startsWith('#')
+      ? primary.match(/\w\w/g)?.map(x => parseInt(x, 16))
+      : [99, 102, 241]; // fallback to indigo
+
+    const r = primaryRgb?.[0] ?? 99;
+    const g = primaryRgb?.[1] ?? 102;
+    const b = primaryRgb?.[2] ?? 241;
+
+    return [
+      `rgba(${r}, ${g}, ${b}, 0.08)`,     // Soft start
+      `rgba(${r}, ${g}, ${b}, 0.12)`,     // Build up
+      `rgba(255, 255, 255, 0.15)`,        // White shimmer peak
+      `rgba(${r}, ${g}, ${b}, 0.18)`,     // Accent color
+      `rgba(255, 255, 255, 0.12)`,        // White accent
+      `rgba(${r}, ${g}, ${b}, 0.1)`,      // Fade out
+    ];
+  }, [playerTheme?.primary, colors.primaryBase]);
 
   if (!currentTrack) return null;
   return (
     <View style={[styles.container, { bottom: miniPlayerBottomOffset }]}>
       <Pressable onPress={onPress}>
-        <LinearGradient
-          colors={gradientColors}
-          style={styles.innerContainer}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-        >
-          <ProgressBar color={playerTheme?.primary || colors.primaryBase} progress={progress} />
+        <View style={styles.gradientContainer}>
+          {/* Base gradient background with content */}
+          <LinearGradient
+            colors={gradientColors}
+            style={styles.innerContainer}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          >
+            {currentTrack.artwork ? (
+              <TurboImage source={{ uri: currentTrack.artwork }} style={styles.artwork} />
+            ) : (
+              <View style={styles.artwork} />
+            )}
 
-          {/* Artwork */}
-          {currentTrack.artwork ? (
-            <TurboImage source={{ uri: currentTrack.artwork }} style={styles.artwork} />
-          ) : (
-            <View style={styles.artwork} />
-          )}
+            <View style={styles.infoContainer}>
+              <Text variant="body" numberOfLines={1} style={titleStyle}>
+                {currentTrack.title}
+              </Text>
+              <Text variant="caption" numberOfLines={1} style={subtitleStyle}>
+                {currentTrack.artist}
+              </Text>
+            </View>
 
-          {/* Info */}
-          <View style={styles.infoContainer}>
-            <Text variant="body" numberOfLines={1} style={{ fontWeight: '700', color: playerTheme?.onSurface || colors.textPrimary, fontSize: 16 }}>
-              {currentTrack.title}
-            </Text>
-            <Text variant="caption" numberOfLines={1} style={{ color: playerTheme?.onSurfaceVariant || colors.textSecondary, fontWeight: '500' }}>
-              {currentTrack.artist}
-            </Text>
-          </View>
+            <View style={styles.controls}>
+              <Pressable style={playBtnStyle} onPress={handlePlayPause}>
+                {isPlaying ? (
+                  <Pause size={28} color={playerTheme?.onPrimaryContainer ?? colors.textPrimary} />
+                ) : (
+                  <Play size={28} color={playerTheme?.onPrimaryContainer ?? colors.textPrimary} />
+                )}
+              </Pressable>
 
-          {/* Controls */}
-          <View style={styles.controls}>
-            {/* Play/Pause */}
-            <Pressable
-              style={[
-                styles.playButton,
-                playerTheme && { backgroundColor: playerTheme.primaryContainer }
-              ]}
-              onPress={(e) => {
-                e.stopPropagation();
-                togglePlayPause();
-              }}
-            >
-              {isPlaying ? (
-                <Pause size={28} color={playerTheme?.onPrimaryContainer || colors.textPrimary} />
-              ) : (
-                <Play size={28} color={playerTheme?.onPrimaryContainer || colors.textPrimary} />
-              )}
-            </Pressable>
+              <Pressable onPress={handleNext}>
+                <SkipNext size={28} color={playerTheme?.onSurface ?? colors.textPrimary} />
+              </Pressable>
+            </View>
+          </LinearGradient>
 
-            {/* Next */}
-            <Pressable onPress={(e) => {
-              e.stopPropagation();
-              next();
-            }}>
-              <SkipNext size={28} color={playerTheme?.onSurface || colors.textPrimary} />
-            </Pressable>
-          </View>
-        </LinearGradient>
+          {/* Progress bar overlay */}
+          <AnimatedLinearGradient
+            colors={progressGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={[styles.progressBar, progressBarStyle]}
+            pointerEvents="none"
+          />
+        </View>
       </Pressable>
     </View>
   );
-};
+});
+
+MiniPlayer.displayName = 'MiniPlayer';

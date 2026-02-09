@@ -1,15 +1,20 @@
-import { AudioPro, AudioProEventType, AudioProRepeatMode, AudioProState, AudioProTrack } from 'react-native-audio-pro';
+import { AudioPro, AudioProRepeatMode, AudioProState, AudioProTrack, useAudioPro } from 'react-native-audio-pro';
 import { create } from 'zustand';
 import { audioService } from '../services/audio/AudioService';
 
-interface PlayerState {
-  currentTrack: AudioProTrack | null;
-  isPlaying: boolean;
+// ---------------------------------------------------------------------------
+// App-only state – things the library doesn't track for us.
+// Playback state (isPlaying, currentTrack, position, duration) comes from the
+// library's `useAudioPro` hook — NO duplication here.
+// ---------------------------------------------------------------------------
+
+interface PlayerAppState {
   minimized: boolean;
-  queue: AudioProTrack[];
   repeatMode: AudioProRepeatMode;
   shuffleMode: boolean;
-  
+  isInitialized: boolean;
+  queue: AudioProTrack[];
+
   // Actions
   play: (track?: AudioProTrack) => void;
   playQueue: (tracks: AudioProTrack[], startIndex?: number) => void;
@@ -19,97 +24,120 @@ interface PlayerState {
   next: () => void;
   previous: () => void;
   seekTo: (time: number) => void;
-  
+
   showMiniPlayer: () => void;
   hideMiniPlayer: () => void;
-  
+
   setRepeatMode: (mode: AudioProRepeatMode) => void;
   setShuffleMode: (enabled: boolean) => void;
+
+  syncQueue: () => void;
+  setInitialized: (initialized: boolean) => void;
 }
 
-// Initialize audio service
-audioService.initialize();
+export const usePlayerStore = create<PlayerAppState>((set, get) => {
 
-export const usePlayerStore = create<PlayerState>((set, get) => {
-  
-  // Subscribe to audio events to sync store
-  AudioPro.addEventListener((event) => {
-    switch (event.type) {
-      case AudioProEventType.STATE_CHANGED:
-        if (event.payload?.state) {
-            set({ isPlaying: event.payload.state === AudioProState.PLAYING });
-        }
-        break;
-      case AudioProEventType.TRACK_CHANGED:
-        set({ currentTrack: event.track }); // track is on root
-        break;
-      // AudioProEventType doesn't have queue changed, so we rely on manual refresh/sync if needed
-      // or assume the queue is managed by AudioService persistence.
-      // If we need queue in UI, we should probably fetch it.
-    }
+  // Initialize audio service when store is created
+  audioService.initialize(() => {
+    get().setInitialized(true);
   });
 
+  // NO addEventListener here – the library's internalStore already handles
+  // event→state. AudioService handles event→persistence. Adding a third
+  // listener would cause duplicate processing.
+
   return {
-    currentTrack: null, // Initial state, will be updated by event or restore
-    isPlaying: false,
     minimized: true,
     queue: [],
     repeatMode: AudioProRepeatMode.OFF,
     shuffleMode: false,
+    isInitialized: false,
 
     play: (track) => {
       audioService.play(track);
       if (track) {
-         set({ currentTrack: track, isPlaying: true, minimized: false });
-      } else {
-         set({ isPlaying: true });
+        set({ minimized: false });
       }
     },
 
     playQueue: (tracks, startIndex = 0) => {
-        audioService.playQueue(tracks, startIndex);
-        set({ 
-            queue: tracks,
-            currentTrack: tracks[startIndex],
-            isPlaying: true,
-            minimized: false 
-        });
+      audioService.playQueue(tracks, startIndex);
+      set({ queue: tracks, minimized: false });
     },
 
     pause: () => {
       audioService.pause();
-      set({ isPlaying: false });
     },
 
     resume: () => {
-        audioService.play();
-        set({ isPlaying: true });
+      audioService.play();
     },
 
+    // #3 – optimistic: state now comes from internalStore which updates
+    // immediately when the native event fires, so there's no lag.
     togglePlayPause: () => {
-      const { isPlaying } = get();
-      if (isPlaying) {
+      const state = AudioPro.getState();
+      if (state === AudioProState.PLAYING) {
         audioService.pause();
       } else {
         audioService.play();
       }
     },
-    
+
     next: () => audioService.next(),
     previous: () => audioService.previous(),
     seekTo: (time) => audioService.seekTo(time),
 
     showMiniPlayer: () => set({ minimized: true }),
     hideMiniPlayer: () => set({ minimized: false }),
-    
+
     setRepeatMode: (mode) => {
-        audioService.setRepeatMode(mode);
-        set({ repeatMode: mode });
+      audioService.setRepeatMode(mode);
+      set({ repeatMode: mode });
     },
-    
+
     setShuffleMode: (enabled) => {
-        audioService.setShuffleMode(enabled);
-        set({ shuffleMode: enabled });
-    }
+      audioService.setShuffleMode(enabled);
+      set({ shuffleMode: enabled });
+    },
+
+    syncQueue: async () => {
+      try {
+        const queue = await audioService.getQueue();
+        set({ queue });
+      } catch (error) {
+        console.warn('Failed to sync queue:', error);
+      }
+    },
+
+    setInitialized: (initialized) => {
+      set({ isInitialized: initialized });
+      if (initialized) {
+        get().syncQueue();
+      }
+    },
   };
 });
+
+// ---------------------------------------------------------------------------
+// Re-export a convenience hook that merges app state + library playback state
+// so consumers can still do `const { currentTrack, isPlaying, ... } = usePlayer();`
+// ---------------------------------------------------------------------------
+
+// Stable selectors – declared outside the hook so references never change.
+const selectTrack = (s: { trackPlaying: AudioProTrack | null }) => s.trackPlaying;
+const selectState = (s: { playerState: AudioProState }) => s.playerState;
+
+export function usePlayer() {
+  const appState = usePlayerStore();
+  // Select primitives / stable refs individually – avoids creating a new
+  // object each render which would break useSyncExternalStore's cache.
+  const currentTrack = useAudioPro(selectTrack);
+  const playerState = useAudioPro(selectState);
+
+  return {
+    ...appState,
+    currentTrack,
+    isPlaying: playerState === AudioProState.PLAYING,
+  };
+}

@@ -1,5 +1,7 @@
-import { AudioPro, AudioProContentType, AudioProEvent, AudioProEventType, AudioProRepeatMode, AudioProTrack } from 'react-native-audio-pro';
+import { AppState, AppStateStatus } from 'react-native';
+import { AudioPro, AudioProContentType, AudioProEvent, AudioProEventType, AudioProRepeatMode, AudioProState, AudioProTrack } from 'react-native-audio-pro';
 import { mmkv } from '../../store/storage';
+import { urlRefreshLogic } from './URLRefreshLogic';
 
 const STORAGE_KEYS = {
   QUEUE: 'audio_queue',
@@ -11,10 +13,21 @@ const STORAGE_KEYS = {
   LAST_TRACK: 'audio_last_track',
 };
 
+/**
+ * AudioService – the sole bridge between the app and react-native-audio-pro.
+ *
+ * Responsibilities:
+ *  1. Configure the native player once.
+ *  2. Persist / restore queue, position, and settings via MMKV.
+ *  3. Provide a clean, fire-and-forget API for the rest of the app.
+ *
+ * It registers one `addEventListener` callback. The library's own internal
+ * Zustand store already processes every event for UI state, so this listener
+ * only handles persistence side-effects (no console.log spam, no state mgmt).
+ */
 class AudioService {
   private static instance: AudioService;
   private initialized = false;
-  private pendingPosition: number | null = null;
 
   private constructor() {}
 
@@ -25,56 +38,97 @@ class AudioService {
     return AudioService.instance;
   }
 
-  initialize() {
-    if (this.initialized) return;
+  initialize(onInitialized?: () => void) {
+    if (this.initialized) {
+      onInitialized?.();
+      return;
+    }
 
-    // Configure AudioPro
-    AudioPro.configure({
-      progressIntervalMs: 500,
-      debug: false, // Set to true if debugging is needed
-      contentType: AudioProContentType.MUSIC,
-      
-    });
+    try {
+      AudioPro.configure({
+        progressIntervalMs: 1000,
+        debug: __DEV__,
+        contentType: AudioProContentType.MUSIC,
+      });
 
-    // Listen to events
-    AudioPro.addEventListener(this.handleAudioEvent);
+      // Single listener – persistence only.
+      AudioPro.addEventListener(this.handleAudioEvent);
 
-    // Restore settings & queue
-    this.restoreState();
+      // Initialize URL refresh logic for expired stream URLs (Gaana)
+      urlRefreshLogic.initialize();
 
-    this.initialized = true;
+      // Detect foreground returns after service death (swipe from recents).
+      // The JS process can survive the swipe, so `initialized` stays true
+      // and restoreState() wouldn't run again without this.
+      AppState.addEventListener('change', this.handleAppStateChange);
+
+      this.restoreState().finally(() => {
+        this.initialized = true;
+        onInitialized?.();
+      });
+    } catch (error) {
+      console.error('Failed to initialize AudioService:', error);
+      onInitialized?.();
+    }
   }
+
+  // ------------------------------------------------------------------
+  // AppState – re-restore after service death
+  // ------------------------------------------------------------------
+
+  private isRestoring = false;
+
+  private handleAppStateChange = (nextState: AppStateStatus) => {
+    if (nextState !== 'active' || !this.initialized || this.isRestoring) return;
+
+    const currentState = AudioPro.getState();
+    // STOPPED = service was killed (emitted by handleBrowserDisconnected)
+    // IDLE   = cold start or never initialized
+    if (currentState === AudioProState.STOPPED || currentState === AudioProState.IDLE) {
+      const hasPersistedQueue = mmkv.getString(STORAGE_KEYS.QUEUE);
+      if (hasPersistedQueue) {
+        if (__DEV__) console.log('[AudioService] Service died – re-restoring on foreground, state:', currentState);
+        this.isRestoring = true;
+        this.restoreState().finally(() => {
+          this.isRestoring = false;
+        });
+      }
+    }
+  };
+
+  // ------------------------------------------------------------------
+  // Event handler – persistence side-effects only
+  // ------------------------------------------------------------------
 
   private handleAudioEvent = (event: AudioProEvent) => {
     switch (event.type) {
       case AudioProEventType.TRACK_CHANGED:
         this.persistCurrentIndex();
         this.persistLastTrack(event.track);
+        break;
 
-        // If we have a pending seek from restoration, execute it now that the track is ready
-        if (this.pendingPosition !== null) {
-          const posToSeek = this.pendingPosition;
-          this.pendingPosition = null; // Clear first to avoid double-seek if index changes again
-          AudioPro.seekTo(posToSeek);
-        }
-        break;
       case AudioProEventType.PLAYBACK_SPEED_CHANGED:
-        if (event.payload?.speed) {
-            mmkv.set(STORAGE_KEYS.PLAYBACK_SPEED, event.payload.speed);
+        if (event.payload?.speed !== undefined) {
+          mmkv.set(STORAGE_KEYS.PLAYBACK_SPEED, event.payload.speed);
         }
         break;
+
       case AudioProEventType.PROGRESS:
-        if (event.payload?.position !== undefined) {
+        // Persist position only when meaningful (> 1 s)
+        if (event.payload?.position !== undefined && event.payload.position > 1000) {
           mmkv.set(STORAGE_KEYS.POSITION, event.payload.position);
         }
         break;
+
       case AudioProEventType.TRACK_ENDED:
         mmkv.remove(STORAGE_KEYS.POSITION);
         break;
     }
   };
 
-  // --- Persistence ---
+  // ------------------------------------------------------------------
+  // Persistence helpers
+  // ------------------------------------------------------------------
 
   private async persistQueue() {
     try {
@@ -91,80 +145,130 @@ class AudioService {
   }
 
   private persistLastTrack(track: AudioProTrack | null) {
-      if (track) {
-          mmkv.set(STORAGE_KEYS.LAST_TRACK, JSON.stringify(track));
-      }
-  }
-
-  private async restoreState() {
-    try {
-      // 1. Restore Settings
-      const repeatMode = mmkv.getString(STORAGE_KEYS.REPEAT_MODE) as AudioProRepeatMode;
-      if (repeatMode) AudioPro.setRepeatMode(repeatMode);
-
-      const shuffleMode = mmkv.getBoolean(STORAGE_KEYS.SHUFFLE_MODE);
-      if (shuffleMode !== undefined) AudioPro.setShuffleMode(shuffleMode);
-
-      const playbackSpeed = mmkv.getNumber(STORAGE_KEYS.PLAYBACK_SPEED);
-      if (playbackSpeed) AudioPro.setPlaybackSpeed(playbackSpeed);
-
-      // 2. Restore Queue
-      const queueJson = mmkv.getString(STORAGE_KEYS.QUEUE);
-      if (queueJson) {
-        const queue = JSON.parse(queueJson) as AudioProTrack[];
-        if (queue.length > 0) {
-            // Add to queue but don't play yet
-            AudioPro.addToQueue(queue);
-            
-            // Restore index
-            const index = mmkv.getNumber(STORAGE_KEYS.CURRENT_INDEX);
-            if (index !== undefined && index >= 0 && index < queue.length) {
-                // We use skipTo to set the index. 
-                // Since we removed enginerBrowser?.play() from native skipTo, 
-                // it will now naturally stay paused during restoration.
-                AudioPro.skipTo(index);
-
-                // Restore position
-                const position = mmkv.getNumber(STORAGE_KEYS.POSITION);
-                if (position && position > 0) {
-                    // We store it as pending and seek once TRACK_CHANGED fires.
-                    // This avoids calling seekTo before the player is ready.
-                    this.pendingPosition = position;
-                }
-                
-                AudioPro.skipTo(index);
-            }
-        }
-      }
-    } catch (e) {
-      console.error('Failed to restore audio state', e);
+    if (track) {
+      mmkv.set(STORAGE_KEYS.LAST_TRACK, JSON.stringify(track));
     }
   }
 
-  // --- Public API Passthrough ---
+  // ------------------------------------------------------------------
+  // Restoration  (#6 – removed fragile 100ms setTimeout,
+  //               #12 – proper undefined checks for MMKV values)
+  // ------------------------------------------------------------------
+
+  private async restoreState(): Promise<void> {
+    try {
+      if (__DEV__) {
+        console.log('[AudioService] Starting state restoration...');
+      }
+      
+      // 1. Settings
+      const repeatMode = mmkv.getString(STORAGE_KEYS.REPEAT_MODE) as AudioProRepeatMode | undefined;
+      if (repeatMode) {
+        AudioPro.setRepeatMode(repeatMode);
+        if (__DEV__) console.log('[AudioService] Restored repeat mode:', repeatMode);
+      }
+
+      const shuffleMode = mmkv.getBoolean(STORAGE_KEYS.SHUFFLE_MODE);
+      if (shuffleMode !== undefined) {
+        AudioPro.setShuffleMode(shuffleMode);
+        if (__DEV__) console.log('[AudioService] Restored shuffle mode:', shuffleMode);
+      }
+
+      const playbackSpeed = mmkv.getNumber(STORAGE_KEYS.PLAYBACK_SPEED);
+      if (playbackSpeed !== undefined && playbackSpeed > 0) {
+        AudioPro.setPlaybackSpeed(playbackSpeed);
+        if (__DEV__) console.log('[AudioService] Restored playback speed:', playbackSpeed);
+      }
+
+      // 2. Queue + track position
+      const queueJson = mmkv.getString(STORAGE_KEYS.QUEUE);
+      if (!queueJson) { 
+        if (__DEV__) console.log('[AudioService] No queue to restore');
+        return; 
+      }
+
+      const queue = JSON.parse(queueJson) as AudioProTrack[];
+      if (queue.length === 0) { 
+        if (__DEV__) console.log('[AudioService] Queue is empty');
+        return; 
+      }
+
+      if (__DEV__) console.log('[AudioService] Restoring queue with', queue.length, 'tracks');
+      
+      // addToQueue → skipTo/skipToWithSeek are all native calls that funnel
+      // through ensureSession() on the native side, so ordering is guaranteed
+      // without an arbitrary setTimeout.
+      AudioPro.addToQueue(queue);
+
+      const index = mmkv.getNumber(STORAGE_KEYS.CURRENT_INDEX);
+      const position = mmkv.getNumber(STORAGE_KEYS.POSITION);
+
+      if (index === undefined || index < 0 || index >= queue.length) {
+        if (__DEV__) console.log('[AudioService] Invalid or missing index:', index);
+        return;
+      }
+
+      if (__DEV__) console.log('[AudioService] Restoring to track index:', index, 'position:', position);
+
+      if (position !== undefined && position > 0) {
+        AudioPro.skipToWithSeek(index, position);
+        if (__DEV__) console.log('[AudioService] Called skipToWithSeek with index:', index, 'position:', position);
+      } else {
+        AudioPro.skipTo(index);
+        if (__DEV__) console.log('[AudioService] Called skipTo with index:', index);
+      }
+      
+      // Give native side time to process and emit events
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Log final state for debugging
+      if (__DEV__) {
+        const finalState = AudioPro.getState();
+        const finalTrack = AudioPro.getPlayingTrack();
+        const finalTimings = AudioPro.getTimings();
+        console.log('[AudioService] State restoration complete');
+        console.log('[AudioService] Final state:', finalState);
+        console.log('[AudioService] Final track:', finalTrack?.title);
+        console.log('[AudioService] Final timings:', finalTimings);
+      }
+      
+      // Never auto-start playback on restoration.
+    } catch (e) {
+      console.error('[AudioService] Failed to restore audio state:', e);
+    }
+  }
+
+  // ------------------------------------------------------------------
+  // Public API  (#2 – play(track) now skips to the added track,
+  //              #7 – playQueue removed stop() race)
+  // ------------------------------------------------------------------
 
   play(track?: AudioProTrack) {
     if (track) {
       AudioPro.addToQueue(track);
-      this.persistQueue(); // Persist queue since we added
-      AudioPro.play(); 
+      // Skip to the newly appended track, then play
+      AudioPro.getQueue().then((q) => {
+        const targetIndex = q.length - 1;
+        if (targetIndex >= 0) {
+          AudioPro.skipTo(targetIndex);
+        }
+        AudioPro.play();
+        this.persistQueue();
+      });
     } else {
       AudioPro.play();
     }
   }
 
   playQueue(tracks: AudioProTrack[], startIndex: number = 0) {
-      AudioPro.stop();
-      AudioPro.clearQueue();
-      AudioPro.addToQueue(tracks);
-      
-      // Persist immediately
-      this.persistQueue();
-      
-      if (startIndex !== 0) {
-          AudioPro.skipTo(startIndex);
-      }
-      AudioPro.play();
+    AudioPro.clearQueue();
+    AudioPro.addToQueue(tracks);
+    this.persistQueue();
+
+    if (startIndex > 0) {
+      AudioPro.skipTo(startIndex);
+    }
+    AudioPro.play();
   }
 
   pause() {
@@ -173,45 +277,51 @@ class AudioService {
 
   stop() {
     AudioPro.stop();
+    mmkv.remove(STORAGE_KEYS.POSITION);
   }
-  
+
   next() {
-      AudioPro.playNext();
+    AudioPro.playNext();
   }
-  
+
   previous() {
-      AudioPro.playPrevious();
+    AudioPro.playPrevious();
   }
 
   seekTo(time: number) {
-      AudioPro.seekTo(time);
+    AudioPro.seekTo(time);
   }
 
   setVolume(volume: number) {
-      AudioPro.setVolume(volume);
+    AudioPro.setVolume(volume);
   }
-  
+
   setRepeatMode(mode: AudioProRepeatMode) {
-      AudioPro.setRepeatMode(mode);
-      mmkv.set(STORAGE_KEYS.REPEAT_MODE, mode);
+    AudioPro.setRepeatMode(mode);
+    mmkv.set(STORAGE_KEYS.REPEAT_MODE, mode);
   }
-  
+
   setShuffleMode(enabled: boolean) {
-      AudioPro.setShuffleMode(enabled);
-      mmkv.set(STORAGE_KEYS.SHUFFLE_MODE, enabled);
+    AudioPro.setShuffleMode(enabled);
+    mmkv.set(STORAGE_KEYS.SHUFFLE_MODE, enabled);
   }
-  
+
   getQueue() {
-      return AudioPro.getQueue();
+    return AudioPro.getQueue();
+  }
+
+  addToQueue(tracks: AudioProTrack | AudioProTrack[]) {
+    const tracksArray = Array.isArray(tracks) ? tracks : [tracks];
+    AudioPro.addToQueue(tracksArray);
+    this.persistQueue();
   }
 
   clearQueue() {
-      AudioPro.clearQueue();
-      mmkv.remove(STORAGE_KEYS.QUEUE);
-      mmkv.remove(STORAGE_KEYS.CURRENT_INDEX);
-      mmkv.remove(STORAGE_KEYS.POSITION);
+    AudioPro.clearQueue();
+    mmkv.remove(STORAGE_KEYS.QUEUE);
+    mmkv.remove(STORAGE_KEYS.CURRENT_INDEX);
+    mmkv.remove(STORAGE_KEYS.POSITION);
   }
-
 }
 
 export const audioService = AudioService.getInstance();

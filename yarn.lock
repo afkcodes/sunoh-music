@@ -2304,6 +2304,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@react-native-assets/slider@npm:^11.0.12":
+  version: 11.0.12
+  resolution: "@react-native-assets/slider@npm:11.0.12"
+  peerDependencies:
+    react: ">=16.13.1"
+    react-native: ">=0.61.4"
+  checksum: 10c0/c110315cd2c47765c19b06eeab672c561523a9ba3517dadadb657dc1a892e1a77dcda6fdc30c0eedb4029b434cbaa58ce87448642b20453e5575cf614e5f4c09
+  languageName: node
+  linkType: hard
+
 "@react-native-community/cli-clean@npm:20.1.1":
   version: 20.1.1
   resolution: "@react-native-community/cli-clean@npm:20.1.1"
@@ -2480,6 +2490,13 @@ __metadata:
   bin:
     rnc-cli: build/bin.js
   checksum: 10c0/40c2b32ffa1e09879b9233d07a88068b076b3cd1913ef1c41a0199e95bd4d6601b3c55b8bbc3dd6d44a8f6b8f0ade811e1e26e6a892e9debb34e946fe4a8e3e6
+  languageName: node
+  linkType: hard
+
+"@react-native-community/slider@npm:^5.1.2":
+  version: 5.1.2
+  resolution: "@react-native-community/slider@npm:5.1.2"
+  checksum: 10c0/e48f0ad72292ca30d63b84a6c0137bb3531516c22a8a3bd1981132f25e3195c19757da271d5b8b1d66d73882ccef02a0cf21c3a99f23144623345c4eaa67823c
   languageName: node
   linkType: hard
 
@@ -4160,9 +4177,11 @@ __metadata:
     "@iconify-json/solar": "npm:^1.2.5"
     "@legendapp/list": "npm:^2.0.19"
     "@lodev09/react-native-true-sheet": "patch:@lodev09/react-native-true-sheet@npm%3A3.8.2#~/.yarn/patches/@lodev09-react-native-true-sheet-npm-3.8.2-1cf7a822fc.patch"
+    "@react-native-assets/slider": "npm:^11.0.12"
     "@react-native-community/cli": "npm:20.1.1"
     "@react-native-community/cli-platform-android": "npm:20.1.1"
     "@react-native-community/cli-platform-ios": "npm:20.1.1"
+    "@react-native-community/slider": "npm:^5.1.2"
     "@react-native/babel-preset": "npm:0.83.1"
     "@react-native/eslint-config": "npm:0.83.1"
     "@react-native/metro-config": "npm:0.83.1"
@@ -4181,7 +4200,8 @@ __metadata:
     prettier: "npm:3.8.1"
     react: "npm:19.2.4"
     react-native: "npm:0.83.1"
-    react-native-audio-pro: "github:afkcodes/react-native-audio-pro#feature/native-queue"
+    react-native-audio-pro: "link:../../oss/react-native-audio-pro"
+    react-native-awesome-slider: "npm:^2.9.0"
     react-native-device-info: "npm:^15.0.1"
     react-native-fast-squircle: "npm:^1.1.1"
     react-native-fs: "npm:^2.20.0"
@@ -8472,15 +8492,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-native-audio-pro@github:afkcodes/react-native-audio-pro#feature/native-queue":
-  version: 11.0.0-beta.2
-  resolution: "react-native-audio-pro@https://github.com/afkcodes/react-native-audio-pro.git#commit=7b4bf4418e2f16443301a9e49a1136867bae9dcb"
-  dependencies:
-    zustand: "npm:^5.0.3"
+"react-native-audio-pro@link:../../oss/react-native-audio-pro::locator=codes.afk.sunoh%40workspace%3A.":
+  version: 0.0.0-use.local
+  resolution: "react-native-audio-pro@link:../../oss/react-native-audio-pro::locator=codes.afk.sunoh%40workspace%3A."
+  languageName: node
+  linkType: soft
+
+"react-native-awesome-slider@npm:^2.9.0":
+  version: 2.9.0
+  resolution: "react-native-awesome-slider@npm:2.9.0"
   peerDependencies:
     react: "*"
     react-native: "*"
-  checksum: 10c0/85c71d5fea828bfe7f226f9767c7396241cec0be3ec0a6fe1a397d893f7b65a6f2d8ef61a4850e071bca39d425f54b7cb188177a1d60f8cb53c1d6be3aa2a2ba
+    react-native-gesture-handler: ">=2.0.0"
+    react-native-reanimated: ">=3.0.0"
+  checksum: 10c0/54e1ed4994f7d4cbf02f542dc2e4b8f4e3f8c88a32855ceb83a383d5dcf4ed3eff8e076c05fcc53ab38ef5196d2e0a3c18aa65e0b2f89776a4a4f632f198adc8
   languageName: node
   linkType: hard
 
@@ -10353,7 +10379,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zustand@npm:^5.0.10, zustand@npm:^5.0.3":
+"zustand@npm:^5.0.10":
   version: 5.0.11
   resolution: "zustand@npm:5.0.11"
   peerDependencies:
