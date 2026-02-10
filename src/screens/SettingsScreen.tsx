@@ -1,5 +1,6 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
+import { AudioPro } from 'react-native-audio-pro';
 import { SafeView } from '../components/common/SafeView';
 import { SectionHeader } from '../components/common/SectionHeader';
 import { Sheet, SheetRef } from '../components/common/Sheet';
@@ -102,6 +103,7 @@ const SettingsItem = ({
   const { colors } = theme;
   const styles = useScalingStyles(createStyles, theme);
 
+
   return (
     <Pressable
       onPress={onPress}
@@ -138,6 +140,23 @@ const SettingsScreen = () => {
   const { data: languagesData } = useLanguages();
   const { languages: selectedLangs, toggleLanguage, streamingQuality, downloadQuality } = useUserSettings();
   const langSheetRef = useRef<SheetRef>(null);
+
+  const [cacheSize, setCacheSize] = useState<string>('Checking...');
+
+  const checkCache = async () => {
+    try {
+      const size = await AudioPro.getCacheSize();
+      const mb = (size / (1024 * 1024)).toFixed(2);
+      setCacheSize(`${mb} MB`);
+    } catch (e) {
+      console.error('Failed to get cache size', e);
+      setCacheSize('Error');
+    }
+  };
+
+  useEffect(() => {
+    checkCache()
+  }, [])
 
   const formatLanguages = (langs: string[]) => {
     return langs.map(l => l.charAt(0).toUpperCase() + l.slice(1)).join(', ');
@@ -219,7 +238,7 @@ const SettingsScreen = () => {
             <SettingsItem
               icon={<TrashBin2 size={24} color={colors.primaryBase} />}
               label="Clear Cache"
-              value="124 MB"
+              value={cacheSize}
               isLast
               onPress={() => { }}
             />

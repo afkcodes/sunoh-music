@@ -29,7 +29,7 @@ class AudioService {
   private static instance: AudioService;
   private initialized = false;
 
-  private constructor() {}
+  private constructor() { }
 
   static getInstance(): AudioService {
     if (!AudioService.instance) {
@@ -49,7 +49,11 @@ class AudioService {
         progressIntervalMs: 1000,
         debug: __DEV__,
         contentType: AudioProContentType.MUSIC,
+        cacheEnabled: true,
+        maxCacheSize: 2048 * 1024 * 1024
       });
+
+      AudioPro.setNotificationButtons(["NEXT", "PLAY", "PREV", "LIKE"])
 
       // Single listener – persistence only.
       AudioPro.addEventListener(this.handleAudioEvent);
@@ -160,7 +164,7 @@ class AudioService {
       if (__DEV__) {
         console.log('[AudioService] Starting state restoration...');
       }
-      
+
       // 1. Settings
       const repeatMode = mmkv.getString(STORAGE_KEYS.REPEAT_MODE) as AudioProRepeatMode | undefined;
       if (repeatMode) {
@@ -182,45 +186,36 @@ class AudioService {
 
       // 2. Queue + track position
       const queueJson = mmkv.getString(STORAGE_KEYS.QUEUE);
-      if (!queueJson) { 
+      if (!queueJson) {
         if (__DEV__) console.log('[AudioService] No queue to restore');
-        return; 
-      }
-
-      const queue = JSON.parse(queueJson) as AudioProTrack[];
-      if (queue.length === 0) { 
-        if (__DEV__) console.log('[AudioService] Queue is empty');
-        return; 
-      }
-
-      if (__DEV__) console.log('[AudioService] Restoring queue with', queue.length, 'tracks');
-      
-      // addToQueue → skipTo/skipToWithSeek are all native calls that funnel
-      // through ensureSession() on the native side, so ordering is guaranteed
-      // without an arbitrary setTimeout.
-      AudioPro.addToQueue(queue);
-
-      const index = mmkv.getNumber(STORAGE_KEYS.CURRENT_INDEX);
-      const position = mmkv.getNumber(STORAGE_KEYS.POSITION);
-
-      if (index === undefined || index < 0 || index >= queue.length) {
-        if (__DEV__) console.log('[AudioService] Invalid or missing index:', index);
         return;
       }
 
-      if (__DEV__) console.log('[AudioService] Restoring to track index:', index, 'position:', position);
+      const queue = JSON.parse(queueJson) as AudioProTrack[];
+      if (queue.length === 0) {
+        if (__DEV__) console.log('[AudioService] Queue is empty');
+        return;
+      }
 
-      if (position !== undefined && position > 0) {
+      const index = mmkv.getNumber(STORAGE_KEYS.CURRENT_INDEX) || 0;
+      const position = mmkv.getNumber(STORAGE_KEYS.POSITION) || 0;
+
+      if (__DEV__) console.log('[AudioService] Restoring queue with', queue.length, 'tracks at index', index, 'position', position);
+
+      // Add tracks to queue
+      // Native side now handles race conditions via deferred seek
+      AudioPro.addToQueue(queue);
+
+      // Attempt to skip to the saved state.
+      if (position > 0) {
         AudioPro.skipToWithSeek(index, position);
-        if (__DEV__) console.log('[AudioService] Called skipToWithSeek with index:', index, 'position:', position);
       } else {
         AudioPro.skipTo(index);
-        if (__DEV__) console.log('[AudioService] Called skipTo with index:', index);
       }
-      
+
       // Give native side time to process and emit events
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       // Log final state for debugging
       if (__DEV__) {
         const finalState = AudioPro.getState();
@@ -231,7 +226,7 @@ class AudioService {
         console.log('[AudioService] Final track:', finalTrack?.title);
         console.log('[AudioService] Final timings:', finalTimings);
       }
-      
+
       // Never auto-start playback on restoration.
     } catch (e) {
       console.error('[AudioService] Failed to restore audio state:', e);
@@ -263,12 +258,12 @@ class AudioService {
   playQueue(tracks: AudioProTrack[], startIndex: number = 0) {
     AudioPro.clearQueue();
     AudioPro.addToQueue(tracks);
-    this.persistQueue();
 
     if (startIndex > 0) {
       AudioPro.skipTo(startIndex);
     }
     AudioPro.play();
+    this.persistQueue();
   }
 
   pause() {

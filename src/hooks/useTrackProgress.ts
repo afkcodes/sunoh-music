@@ -1,48 +1,37 @@
-import { useEffect, useRef, useState } from 'react';
-import { AudioPro, AudioProEvent, AudioProEventType } from 'react-native-audio-pro';
+import { useMemo } from 'react';
+import { useAudioPro } from 'react-native-audio-pro';
 
 interface TrackProgress {
   position: number;
   duration: number;
 }
 
+// Primitive selectors – stable references, no new objects created per call.
+// This avoids the "getSnapshot should be cached" infinite loop in React 19's
+// useSyncExternalStore (which Zustand uses internally).
+const selectPosition = (s: { position: number }) => s.position;
+const selectDuration = (s: { duration: number }) => s.duration;
+
+// Per-second equality: only re-render when the displayed second changes.
+// Primitives are inherently referentially stable so this is safe with
+// useSyncExternalStore while still throttling renders to ~1/s.
+const secondEquality = (a: number, b: number): boolean =>
+  Math.floor(a / 1000) === Math.floor(b / 1000);
+
 /**
  * Returns { position, duration } in milliseconds.
  *
- * Internally deduplicates updates: a re-render only triggers when the
- * *displayed second* changes (i.e. Math.floor(ms / 1000) differs), which
- * prevents 2 unnecessary re-renders per second across every consumer.
+ * Reads directly from the library's internalStore via useAudioPro so that
+ * optimistic position updates from seekTo() are reflected immediately,
+ * preventing the slider from jumping back to the old position during a seek.
+ *
+ * Re-renders are throttled to once per displayed-second change via a custom
+ * equality function, keeping rendering cost identical to the old approach.
  */
 export const useTrackProgress = (): TrackProgress => {
-  const [progress, setProgress] = useState<TrackProgress>({ position: 0, duration: 0 });
-  const lastSecondRef = useRef(-1);
-  const lastDurRef = useRef(-1);
-
-  useEffect(() => {
-    const handleEvent = (event: AudioProEvent) => {
-      if (event.type === AudioProEventType.PROGRESS && event.payload) {
-        const pos = event.payload.position ?? 0;
-        const dur = event.payload.duration ?? 0;
-
-        // Only trigger a React state update when the displayed second changes
-        const posSecond = Math.floor(pos / 1000);
-        const durSecond = Math.floor(dur / 1000);
-
-        if (posSecond !== lastSecondRef.current || durSecond !== lastDurRef.current) {
-          lastSecondRef.current = posSecond;
-          lastDurRef.current = durSecond;
-          setProgress({ position: pos, duration: dur });
-        }
-      }
-    };
-
-    const subscription = AudioPro.addEventListener(handleEvent);
-    return () => {
-      subscription.remove();
-    };
-  }, []);
-
-  return progress;
+  const position = useAudioPro(selectPosition, secondEquality);
+  const duration = useAudioPro(selectDuration, secondEquality);
+  return useMemo(() => ({ position, duration }), [position, duration]);
 };
 
 export const formatTime = (ms: number): string => {
