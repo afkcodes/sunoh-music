@@ -37,14 +37,14 @@ interface PlayerAppState {
 
 export const usePlayerStore = create<PlayerAppState>((set, get) => {
 
-  // Initialize audio service when store is created
-  audioService.initialize(() => {
+  // AudioPro is configured in index.js before App mounts.
+  // Mark as initialized immediately since setup is already done.
+  setTimeout(() => {
     get().setInitialized(true);
-  });
+  }, 0);
 
   // NO addEventListener here – the library's internalStore already handles
-  // event→state. AudioService handles event→persistence. Adding a third
-  // listener would cause duplicate processing.
+  // event→state. AudioService handles event→persistence.
 
   return {
     minimized: true,
@@ -76,7 +76,7 @@ export const usePlayerStore = create<PlayerAppState>((set, get) => {
     // #3 – optimistic: state now comes from internalStore which updates
     // immediately when the native event fires, so there's no lag.
     togglePlayPause: () => {
-      const state = AudioPro.getState();
+      const state = AudioPro.getPlaybackState();
       if (state === AudioProState.PLAYING) {
         audioService.pause();
       } else {
@@ -97,13 +97,13 @@ export const usePlayerStore = create<PlayerAppState>((set, get) => {
     },
 
     setShuffleMode: (enabled) => {
-      audioService.setShuffleMode(enabled);
+      audioService.setShuffleModeEnabled(enabled);
       set({ shuffleMode: enabled });
     },
 
     syncQueue: async () => {
       try {
-        const queue = await audioService.getQueue();
+        const queue = await audioService.getMediaItems();
         set({ queue });
       } catch (error) {
         console.warn('Failed to sync queue:', error);

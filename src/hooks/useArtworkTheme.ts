@@ -54,6 +54,9 @@ export function useArtworkTheme(artworkUrl?: string) {
           // Stale guard – another artworkUrl was set while we were extracting.
           if (id !== requestIdRef.current) return;
 
+          console.log(palette);
+
+
           const seedColor = palette.darkVibrant || palette.vibrant || colors.primaryBase;
           const tonal = generateTonalPalette(seedColor);
           const mTheme = generateThemeColors(tonal, true);
@@ -71,7 +74,7 @@ export function useArtworkTheme(artworkUrl?: string) {
         .catch((e) => {
           if (id !== requestIdRef.current) return;
           console.warn('[useArtworkTheme] Failed to extract palette:', e);
-          
+
           if (!cached) {
             setGradientColors([colors.bgSurface, colors.bgPage]);
             setPlayerTheme(null);

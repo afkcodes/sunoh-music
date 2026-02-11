@@ -112,7 +112,7 @@ export class URLRefreshLogic {
         // Sliding Window: Pre-refresh next and previous tracks
         const { index } = event.payload || {};
         if (typeof index === 'number') {
-          AudioPro.getQueue().then((queue) => {
+          AudioPro.getMediaItems().then((queue) => {
             const nextIndex = index + 1;
             const prevIndex = index - 1;
 
@@ -138,14 +138,15 @@ export class URLRefreshLogic {
             console.log(`[URLRefresh] Playback error at index ${index}: ${errorMessage}. Attempting force refresh & retry.`);
           }
           
-          AudioPro.getQueue().then(async (queue) => {
+          AudioPro.getMediaItems().then(async (queue) => {
             const track = queue[index];
             if (track) {
               // Pass force=true to bypass source/throttle checks on error
               await this.refreshTrackUrl(index, track, true);
               setTimeout(() => {
-                AudioPro.skipTo(index); // Retry playback
-              }, 150);
+                AudioPro.seekToMediaItem(index); // Retry playback
+                setTimeout(() => AudioPro.play(), 100);
+              }, 200);
             }
           });
         }
