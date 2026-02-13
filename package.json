@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@legendapp/list": "^2.0.19",
-    "@lodev09/react-native-true-sheet": "^3.8.2",
+    "@lodev09/react-native-true-sheet": "patch:@lodev09/react-native-true-sheet@npm%3A3.8.2#~/.yarn/patches/@lodev09-react-native-true-sheet-npm-3.8.2-1cf7a822fc.patch",
     "@react-native-assets/slider": "^11.0.12",
     "@react-native-community/slider": "^5.1.2",
     "@somesoap/react-native-image-palette": "^1.2.2",
@@ -66,5 +66,8 @@
   "engines": {
     "node": ">=20"
   },
-  "packageManager": "yarn@4.6.0"
+  "packageManager": "yarn@4.6.0",
+  "resolutions": {
+    "@lodev09/react-native-true-sheet@npm:3.8.2": "patch:@lodev09/react-native-true-sheet@npm%3A3.8.2#~/.yarn/patches/@lodev09-react-native-true-sheet-npm-3.8.2-1cf7a822fc.patch"
+  }
 }

@@ -10,7 +10,7 @@ import { useEffect } from 'react';
 import { SheetRef } from '../components/common/Sheet';
 import { SongMenuSheet } from '../components/common/SongMenuSheet';
 import { MiniPlayer } from '../components/player/MiniPlayer';
-import { PlayerSheet } from '../components/player/PlayerSheet';
+import { EqualizerSheet, PlayerSheet, QueueSheet } from '../components/player/PlayerSheet';
 import { useAutoQueue } from '../hooks/useAutoQueue';
 import { useMenuStore } from '../store/useMenuStore';
 import { ThemeProvider, useTheme } from '../theme/ThemeContext';
@@ -49,6 +49,8 @@ function AppContent() {
 
 export function App() {
   const playerSheetRef = useRef<SheetRef>(null);
+  const queueSheetRef = useRef<SheetRef>(null);
+  const equalizerSheetRef = useRef<SheetRef>(null);
   const songMenuRef = useRef<SheetRef>(null);
   const visible = useMenuStore(state => state.visible);
 
@@ -67,7 +69,13 @@ export function App() {
           <ThemeProvider>
             <AppContent />
             <MiniPlayer onPress={() => playerSheetRef.current?.present()} />
-            <PlayerSheet ref={playerSheetRef} />
+            <PlayerSheet
+              ref={playerSheetRef}
+              onOpenQueue={() => queueSheetRef.current?.present()}
+              onOpenEqualizer={() => equalizerSheetRef.current?.present()}
+            />
+            <QueueSheet ref={queueSheetRef} />
+            <EqualizerSheet ref={equalizerSheetRef} />
             <SongMenuSheet ref={songMenuRef} />
             {/* <ScalingDebugPanel /> */}
           </ThemeProvider>

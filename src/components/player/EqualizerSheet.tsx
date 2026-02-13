@@ -5,10 +5,11 @@
  * preset selection, and real-time audio adjustment.
  */
 
-import Slider from '@react-native-community/slider';
+import { Slider } from '@react-native-assets/slider';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { AudioPro } from 'react-native-audio-pro';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { EQ_PRESETS, EQPreset, FREQUENCY_LABELS, PRESET_CATEGORIES } from '../../features/equalizer/eqPresets';
 import { mmkv } from '../../store/storage';
@@ -66,6 +67,7 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
   },
   scrollContent: {
     padding: s.mScale(20),
+
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -249,23 +251,43 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
   slidersSection: {
     marginBottom: s.mScale(24),
   },
-  sliderRow: {
-    marginBottom: s.mScale(20),
-  },
-  sliderHeader: {
+  mixerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    paddingHorizontal: s.mScale(8),
+    paddingVertical: s.mScale(16),
+    backgroundColor: theme.colors.bgSurfaceHover + '40',
+    borderRadius: s.mScale(16),
+  },
+  sliderColumn: {
     alignItems: 'center',
-    marginBottom: s.mScale(8),
+    gap: s.mScale(8),
   },
   sliderLabel: {
-    fontSize: s.font(13),
+    fontSize: s.font(10),
     fontWeight: '600',
+    opacity: 0.7,
+    textAlign: 'center',
   },
   sliderValue: {
-    fontSize: s.font(13),
+    fontSize: s.font(10),
     fontWeight: '700',
     color: theme.colors.primaryBase,
+    textAlign: 'center',
+    minWidth: s.mScale(32),
+  },
+  dbScale: {
+    position: 'absolute',
+    left: s.mScale(4),
+    top: s.mScale(16),
+    bottom: s.mScale(40),
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  dbLabel: {
+    fontSize: s.font(9),
+    opacity: 0.4,
   },
   disabledOverlay: {
     position: 'absolute',
@@ -318,11 +340,9 @@ export const EqualizerSheet = forwardRef<SheetRef, EqualizerSheetProps>((_, ref)
   const [activePreset, setActivePreset] = useState<string>('flat');
   const [isEnabled, setIsEnabled] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
-    quickAccess: true,
-    genres: false,
-    richVibrant: false,
-    audioEnhancement: false,
-    deviceSituation: false,
+    signatures: true,
+    genres: true,
+    situational: false,
   });
 
   const sheetRef = React.useRef<SheetRef>(null);
@@ -415,19 +435,25 @@ export const EqualizerSheet = forwardRef<SheetRef, EqualizerSheetProps>((_, ref)
   }, [isEnabled, applyEQ, barHeights]);
 
   const handleGainChange = useCallback((index: number, value: number) => {
+    // Animate bar height in real-time
+    const heightPercent = ((Math.max(-12, Math.min(12, value)) + 12) / 24) * 100;
+    if (barHeights[index]) {
+      barHeights[index].value = Math.max(2, Math.min(98, heightPercent));
+    }
+
+    // Apply EQ in real-time for audio feedback
+    if (isEnabled) {
+      const tempGains = [...gains];
+      tempGains[index] = value;
+      applyEQ(tempGains);
+    }
+  }, [gains, isEnabled, applyEQ, barHeights]);
+
+  const handleGainComplete = useCallback((index: number, value: number) => {
     const newGains = [...gains];
     newGains[index] = value;
     setGains(newGains);
     setActivePreset('custom');
-
-    // Animate bar height
-    const heightPercent = ((Math.max(-12, Math.min(12, value)) + 12) / 24) * 100;
-    if (barHeights[index]) {
-      barHeights[index].value = withSpring(Math.max(2, Math.min(98, heightPercent)), {
-        damping: 15,
-        stiffness: 100,
-      });
-    }
 
     mmkv.set(STORAGE_KEYS.EQ_GAINS, JSON.stringify(newGains));
     mmkv.set(STORAGE_KEYS.EQ_PRESET, 'custom');
@@ -435,7 +461,7 @@ export const EqualizerSheet = forwardRef<SheetRef, EqualizerSheetProps>((_, ref)
     if (isEnabled) {
       applyEQ(newGains);
     }
-  }, [gains, isEnabled, applyEQ, barHeights]);
+  }, [gains, isEnabled, applyEQ]);
 
   const handleReset = useCallback(() => {
     const flatPreset = EQ_PRESETS.find(p => p.id === 'flat');
@@ -549,7 +575,7 @@ export const EqualizerSheet = forwardRef<SheetRef, EqualizerSheetProps>((_, ref)
                   <Text
                     style={[
                       styles.presetButtonText,
-                      { color: activePreset === preset.id ? colors.textInverse : colors.textPrimary },
+                      { color: activePreset === preset.id ? '#FFFFFF' : colors.textPrimary },
                     ]}
                   >
                     {preset.name}
@@ -565,6 +591,7 @@ export const EqualizerSheet = forwardRef<SheetRef, EqualizerSheetProps>((_, ref)
 
   const currentPreset = EQ_PRESETS.find(p => p.id === activePreset);
   const impact = getImpactLevel();
+  const [isSliding, setIsSliding] = useState(false);
 
   return (
     <Sheet
@@ -611,6 +638,9 @@ export const EqualizerSheet = forwardRef<SheetRef, EqualizerSheetProps>((_, ref)
           ]}
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled
+          renderToHardwareTextureAndroid
+          removeClippedSubviews
+          scrollEnabled={!isSliding}
         >
           {/* Frequency Visualizer */}
           <View style={styles.visualizerContainer}>
@@ -669,11 +699,9 @@ export const EqualizerSheet = forwardRef<SheetRef, EqualizerSheetProps>((_, ref)
               <Text style={styles.sectionTitle}>Sound Presets</Text>
             </View>
 
-            {renderPresetCategory('quickAccess', 'Quick Access', 6, PRESET_CATEGORIES.quickAccess)}
-            {renderPresetCategory('genres', 'Music Genres', 4, PRESET_CATEGORIES.genres)}
-            {renderPresetCategory('richVibrant', 'Rich & Vibrant', 7, PRESET_CATEGORIES.richVibrant)}
-            {renderPresetCategory('audioEnhancement', 'Audio Enhancement', 4, PRESET_CATEGORIES.audioEnhancement)}
-            {renderPresetCategory('deviceSituation', 'Device & Situation', 5, PRESET_CATEGORIES.deviceSituation)}
+            {renderPresetCategory('signatures', 'Sound Signatures', PRESET_CATEGORIES.signatures.length, PRESET_CATEGORIES.signatures)}
+            {renderPresetCategory('genres', 'Music Genres', PRESET_CATEGORIES.genres.length, PRESET_CATEGORIES.genres)}
+            {renderPresetCategory('situational', 'Device & Situation', PRESET_CATEGORIES.situational.length, PRESET_CATEGORIES.situational)}
           </View>
 
           {/* Manual Sliders */}
@@ -683,27 +711,40 @@ export const EqualizerSheet = forwardRef<SheetRef, EqualizerSheetProps>((_, ref)
               <Text style={styles.sectionTitle}>Manual Adjustment</Text>
             </View>
 
-            {gains.map((gain, index) => (
-              <View key={index} style={styles.sliderRow}>
-                <View style={styles.sliderHeader}>
-                  <Text style={styles.sliderLabel}>{FREQUENCY_LABELS[index]} Hz</Text>
+            <GestureHandlerRootView style={styles.mixerContainer}>
+              {gains.map((gain, index) => (
+                <View key={index} style={styles.sliderColumn}>
                   <Text style={styles.sliderValue}>
-                    {gain > 0 ? '+' : ''}{gain.toFixed(1)} dB
+                    {gain > 0 ? '+' : ''}{gain.toFixed(0)}
+                  </Text>
+                  <Slider
+                    value={gain}
+                    minimumValue={-12}
+                    maximumValue={12}
+                    step={0.5}
+                    vertical
+                    inverted
+                    style={{ height: 140 }}
+                    onValueChange={(value) => {
+                      handleGainChange(index, value)
+                      setIsSliding(true);
+                    }}
+                    onSlidingComplete={() => {
+                      setIsSliding(false);
+                    }}
+                    minimumTrackTintColor={colors.primaryBase}
+                    maximumTrackTintColor={colors.borderSubtle}
+                    thumbTintColor={colors.primaryText}
+                    trackHeight={6}
+                    trackStyle={{ width: 2 }}
+                    thumbSize={18}
+                  />
+                  <Text style={styles.sliderLabel}>
+                    {FREQUENCY_LABELS[index]?.replace('k', 'K') ?? ''}
                   </Text>
                 </View>
-                <Slider
-                  style={{ width: '100%', height: 40 }}
-                  minimumValue={-12}
-                  maximumValue={12}
-                  step={0.5}
-                  value={gain}
-                  onValueChange={(value) => handleGainChange(index, value)}
-                  minimumTrackTintColor={colors.primaryBase}
-                  maximumTrackTintColor={colors.borderSubtle}
-                  thumbTintColor={colors.primaryBase}
-                />
-              </View>
-            ))}
+              ))}
+            </GestureHandlerRootView>
           </View>
         </ScrollView>
 

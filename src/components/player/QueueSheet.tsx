@@ -150,7 +150,7 @@ export const QueueSheet = forwardRef<SheetRef, {}>((_, ref) => {
   return (
     <Sheet
       ref={sheetRef}
-      sizes={[1]}
+      sizes={[0.9]}
       cornerRadius={theme.borderRadius.lg}
       scrollable
     >
@@ -175,8 +175,12 @@ export const QueueSheet = forwardRef<SheetRef, {}>((_, ref) => {
             rowGap={0}
             columnGap={0}
             customHandle
-            dragActivationDelay={300}
-            activeItemScale={1.05}
+            dragActivationDelay={150}
+            activeItemScale={1.02}
+            activeItemOpacity={0.9}
+            activeItemShadowOpacity={0.1}
+            inactiveItemOpacity={1}
+            dropAnimationDuration={50}
             hapticsEnabled
             onOrderChange={({ fromIndex, toIndex }) => {
               reorder(fromIndex, toIndex);

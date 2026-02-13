@@ -21,6 +21,8 @@ import { QueueSheet } from './QueueSheet';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
+export { EqualizerSheet, QueueSheet };
+
 const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
   container: {
     height: SCREEN_HEIGHT,
@@ -145,7 +147,12 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
   },
 }));
 
-export const PlayerSheet = forwardRef<SheetRef, {}>((_, ref) => {
+interface PlayerSheetProps {
+  onOpenQueue?: () => void;
+  onOpenEqualizer?: () => void;
+}
+
+export const PlayerSheet = forwardRef<SheetRef, PlayerSheetProps>(({ onOpenQueue, onOpenEqualizer }, ref) => {
   const theme = useTheme();
   const styles = useScalingStyles(createStyles, theme);
   const {
@@ -163,8 +170,6 @@ export const PlayerSheet = forwardRef<SheetRef, {}>((_, ref) => {
   const { toggleLikeSong, isLiked } = useLibraryStore();
   const { playerTheme, gradientColors } = useArtworkTheme(currentTrack?.artwork);
   const { position, duration } = useTrackProgress();
-  const queueSheetRef = React.useRef<SheetRef>(null);
-  const equalizerSheetRef = React.useRef<SheetRef>(null);
 
   const [isSeeking, setIsSeeking] = useState(false);
   const [seekPosition, setSeekPosition] = useState(0);
@@ -335,14 +340,14 @@ export const PlayerSheet = forwardRef<SheetRef, {}>((_, ref) => {
             <View style={styles.footerRow}>
               <Pressable
                 style={styles.footerButton}
-                onPress={() => equalizerSheetRef.current?.present()}
+                onPress={onOpenEqualizer}
               >
                 <Tuning size={26} color={playerTheme?.onSurfaceVariant ?? 'rgba(255, 255, 255, 0.8)'} />
               </Pressable>
 
               <Pressable
                 style={styles.footerButton}
-                onPress={() => queueSheetRef.current?.present()}
+                onPress={onOpenQueue}
               >
                 <ListMusic size={26} color={playerTheme?.onSurfaceVariant ?? 'rgba(255, 255, 255, 0.8)'} />
               </Pressable>
@@ -350,8 +355,6 @@ export const PlayerSheet = forwardRef<SheetRef, {}>((_, ref) => {
           </SafeView>
         </LinearGradient>
       </View>
-      <QueueSheet ref={queueSheetRef} />
-      <EqualizerSheet ref={equalizerSheetRef} />
     </Sheet >
   );
 });
