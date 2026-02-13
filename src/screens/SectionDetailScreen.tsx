@@ -145,6 +145,7 @@ export const SectionDetailScreen: React.FC = () => {
             />
           )}
           keyExtractor={(item, index) => (item.heading || 'section') + index}
+          style={{ flex: 1 }}
           contentContainerStyle={{ paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
           estimatedItemSize={250}
@@ -159,6 +160,7 @@ export const SectionDetailScreen: React.FC = () => {
         data={sectionData}
         renderItem={renderItem}
         keyExtractor={(item) => (item.id || (item as any).url || Math.random().toString())}
+        style={{ flex: 1 }}
         contentContainerStyle={styles.listContent}
         numColumns={NUM_COLUMNS}
         showsVerticalScrollIndicator={false}

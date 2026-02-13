@@ -16,6 +16,7 @@ interface PlayerAppState {
   isInitialized: boolean;
   queue: AudioProTrack[];
   optimisticCurrentTrack: AudioProTrack | null;
+  isFetching: boolean;
 
   // Actions
   play: (track?: AudioProTrack) => void;
@@ -26,6 +27,8 @@ interface PlayerAppState {
   next: () => void;
   previous: () => void;
   seekTo: (time: number) => void;
+  reorder: (fromIndex: number, toIndex: number) => void;
+  skipToTrack: (index: number) => void;
 
   showMiniPlayer: () => void;
   hideMiniPlayer: () => void;
@@ -39,6 +42,7 @@ interface PlayerAppState {
   addToQueue: (track: AudioProTrack) => void;
   setInitialized: (initialized: boolean) => void;
   setOptimisticCurrentTrack: (track: AudioProTrack | null) => void;
+  setIsFetching: (isFetching: boolean) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -89,11 +93,12 @@ export const usePlayerStore = create<PlayerAppState>((set, get) => {
     repeatMode: AudioProRepeatMode.OFF,
     shuffleMode: false,
     isInitialized: false,
+    isFetching: false,
 
     play: (track) => {
       audioService.play(track);
       if (track) {
-        set({ minimized: false });
+        set({ minimized: false, optimisticCurrentTrack: track });
       }
     },
 
@@ -124,6 +129,11 @@ export const usePlayerStore = create<PlayerAppState>((set, get) => {
     next: () => audioService.next(),
     previous: () => audioService.previous(),
     seekTo: (time) => audioService.seekTo(time),
+    reorder: (from, to) => {
+      audioService.reorderMediaItem(from, to);
+      get().syncQueue();
+    },
+    skipToTrack: (index) => audioService.skipToTrack(index),
 
     showMiniPlayer: () => set({ minimized: true }),
     hideMiniPlayer: () => set({ minimized: false }),
@@ -172,6 +182,7 @@ export const usePlayerStore = create<PlayerAppState>((set, get) => {
       audioService.addToQueue(track);
       get().syncQueue();
     },
+    setIsFetching: (isFetching) => set({ isFetching }),
   };
 });
 
@@ -204,5 +215,6 @@ export function usePlayer() {
     ...appState,
     currentTrack,
     isPlaying: playerState === AudioProState.PLAYING,
+    playerState,
   };
 }

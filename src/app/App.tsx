@@ -24,7 +24,7 @@ function AppContent() {
   const { isDark } = useTheme();
 
   // Enable auto-queue globally - fetches recommendations when queue is running low
-  useAutoQueue(true);
+  useAutoQueue();
 
   return (
     <>

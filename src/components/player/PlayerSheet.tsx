@@ -10,12 +10,14 @@ import { AppTheme } from '../../theme/types';
 import { makeScalingStyles, useScalingStyles } from '../../utils/style.util';
 import { SafeView } from '../common';
 import { Sheet, SheetRef } from '../common/Sheet';
-import { BillList, Heart, HeartFill, MenuDots, Pause, Play, Repeat, Shuffle, SkipNext, SkipPrevious } from '../common/SolarIcons.generated';
+import { Heart, HeartFill, ListMusic, Pause, Play, Repeat, Shuffle, SkipNext, SkipPrevious, Tuning } from '../common/SolarIcons.generated';
 import { Text } from '../common/Text';
 
 import { AudioProRepeatMode } from 'react-native-audio-pro';
 import { formatTime, useTrackProgress } from '../../hooks/useTrackProgress';
 import { useLibraryStore } from '../../store/useLibraryStore';
+import { EqualizerSheet } from './EqualizerSheet';
+import { QueueSheet } from './QueueSheet';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -161,6 +163,8 @@ export const PlayerSheet = forwardRef<SheetRef, {}>((_, ref) => {
   const { toggleLikeSong, isLiked } = useLibraryStore();
   const { playerTheme, gradientColors } = useArtworkTheme(currentTrack?.artwork);
   const { position, duration } = useTrackProgress();
+  const queueSheetRef = React.useRef<SheetRef>(null);
+  const equalizerSheetRef = React.useRef<SheetRef>(null);
 
   const [isSeeking, setIsSeeking] = useState(false);
   const [seekPosition, setSeekPosition] = useState(0);
@@ -329,16 +333,25 @@ export const PlayerSheet = forwardRef<SheetRef, {}>((_, ref) => {
 
             {/* Footer */}
             <View style={styles.footerRow}>
-              <Pressable style={styles.footerButton}>
-                <BillList size={26} color={playerTheme?.onSurfaceVariant ?? 'rgba(255, 255, 255, 0.8)'} />
+              <Pressable
+                style={styles.footerButton}
+                onPress={() => equalizerSheetRef.current?.present()}
+              >
+                <Tuning size={26} color={playerTheme?.onSurfaceVariant ?? 'rgba(255, 255, 255, 0.8)'} />
               </Pressable>
-              <Pressable style={styles.footerButton}>
-                <MenuDots size={26} color={playerTheme?.onSurfaceVariant ?? 'rgba(255, 255, 255, 0.8)'} />
+
+              <Pressable
+                style={styles.footerButton}
+                onPress={() => queueSheetRef.current?.present()}
+              >
+                <ListMusic size={26} color={playerTheme?.onSurfaceVariant ?? 'rgba(255, 255, 255, 0.8)'} />
               </Pressable>
             </View>
           </SafeView>
         </LinearGradient>
       </View>
+      <QueueSheet ref={queueSheetRef} />
+      <EqualizerSheet ref={equalizerSheetRef} />
     </Sheet >
   );
 });

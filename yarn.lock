@@ -2175,7 +2175,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@lodev09/react-native-true-sheet@npm:3.8.2":
+"@lodev09/react-native-true-sheet@npm:^3.8.2":
   version: 3.8.2
   resolution: "@lodev09/react-native-true-sheet@npm:3.8.2"
   peerDependencies:
@@ -2195,29 +2195,6 @@ __metadata:
     react-native-worklets:
       optional: true
   checksum: 10c0/28e220e1ddb11f01027f8266ab79eb4982f8b504cbeb942aded99044d5ffd4f160022bf27d822bf89d8a766eefa4d7d46e2bda85d9bc3a3fe099f63f4c0dca07
-  languageName: node
-  linkType: hard
-
-"@lodev09/react-native-true-sheet@patch:@lodev09/react-native-true-sheet@npm%3A3.8.2#~/.yarn/patches/@lodev09-react-native-true-sheet-npm-3.8.2-1cf7a822fc.patch":
-  version: 3.8.2
-  resolution: "@lodev09/react-native-true-sheet@patch:@lodev09/react-native-true-sheet@npm%3A3.8.2#~/.yarn/patches/@lodev09-react-native-true-sheet-npm-3.8.2-1cf7a822fc.patch::version=3.8.2&hash=3fb410"
-  peerDependencies:
-    "@gorhom/bottom-sheet": ">=5"
-    "@react-navigation/native": ">=7"
-    react: "*"
-    react-native: "*"
-    react-native-reanimated: ">=4"
-    react-native-worklets: "*"
-  peerDependenciesMeta:
-    "@gorhom/bottom-sheet":
-      optional: true
-    "@react-navigation/native":
-      optional: true
-    react-native-reanimated:
-      optional: true
-    react-native-worklets:
-      optional: true
-  checksum: 10c0/0a2886e833790117b2753c7353997dd5c60fb7642e83b1f5dbe6b8f3110192e362e5529c930ebaa999661c6bfe4e5930578fe6100fc2752a76af17c64ef6c9f4
   languageName: node
   linkType: hard
 
@@ -4176,7 +4153,7 @@ __metadata:
     "@babel/runtime": "npm:^7.28.6"
     "@iconify-json/solar": "npm:^1.2.5"
     "@legendapp/list": "npm:^2.0.19"
-    "@lodev09/react-native-true-sheet": "patch:@lodev09/react-native-true-sheet@npm%3A3.8.2#~/.yarn/patches/@lodev09-react-native-true-sheet-npm-3.8.2-1cf7a822fc.patch"
+    "@lodev09/react-native-true-sheet": "npm:^3.8.2"
     "@react-native-assets/slider": "npm:^11.0.12"
     "@react-native-community/cli": "npm:20.1.1"
     "@react-native-community/cli-platform-android": "npm:20.1.1"
@@ -4210,9 +4187,10 @@ __metadata:
     react-native-linear-gradient: "npm:^2.8.3"
     react-native-mmkv: "npm:^4.1.2"
     react-native-nitro-modules: "npm:^0.33.2"
-    react-native-reanimated: "npm:~4.2.1"
+    react-native-reanimated: "npm:^4.2.1"
     react-native-safe-area-context: "npm:^5.6.2"
     react-native-share: "npm:^12.2.4"
+    react-native-sortables: "npm:^1.9.4"
     react-native-svg: "npm:^15.15.1"
     react-native-turbo-image: "npm:^1.24.1"
     react-native-worklets: "npm:^0.7.2"
@@ -8563,7 +8541,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-native-haptic-feedback@npm:^2.3.3":
+"react-native-haptic-feedback@npm:>=2.0.0, react-native-haptic-feedback@npm:^2.3.3":
   version: 2.3.3
   resolution: "react-native-haptic-feedback@npm:2.3.3"
   peerDependencies:
@@ -8613,7 +8591,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-native-reanimated@npm:~4.2.1":
+"react-native-reanimated@npm:^4.2.1":
   version: 4.2.1
   resolution: "react-native-reanimated@npm:4.2.1"
   dependencies:
@@ -8641,6 +8619,23 @@ __metadata:
   version: 12.2.5
   resolution: "react-native-share@npm:12.2.5"
   checksum: 10c0/d0e7f2fa405346b2eab37b3776c9d6c79f673930f0854ac45dfdf3aed0923b8a512fbe8653960399f5d9bf965aa98fe374c27c36e9fd1f93825e572ea3bf83df
+  languageName: node
+  linkType: hard
+
+"react-native-sortables@npm:^1.9.4":
+  version: 1.9.4
+  resolution: "react-native-sortables@npm:1.9.4"
+  dependencies:
+    react-native-haptic-feedback: "npm:>=2.0.0"
+  peerDependencies:
+    react: "*"
+    react-native: "*"
+    react-native-gesture-handler: ">=2.0.0"
+    react-native-reanimated: ">=3.0.0"
+  dependenciesMeta:
+    react-native-haptic-feedback:
+      optional: true
+  checksum: 10c0/dcc1bf2c10d4714e9ec71d7f0f782c45961894e818084cd1c8a4991068206a9d78266ae0b1bd47589d816eb130dc0bbf27a28210b22d2c5f48c57d630897fe99
   languageName: node
   linkType: hard
 

@@ -3,6 +3,7 @@ import { AudioPro, useAudioPro } from 'react-native-audio-pro';
 import { MUSIC_SONG_RECOMMEND } from '../services/api/endpoints';
 import { audioService } from '../services/audio/AudioService';
 import { usePlayerStore } from '../store/usePlayerStore';
+import { useUserSettings } from '../store/useUserSettings';
 import { mapSongToTrack } from '../utils/trackMapping';
 
 /**
@@ -18,7 +19,6 @@ import { mapSongToTrack } from '../utils/trackMapping';
  * - Works seamlessly with shuffle and repeat modes
  */
 
-const TRIGGER_THRESHOLD = 3; // Fetch when 3 songs remaining
 const FETCH_LIMIT = 20; // Number of recommended songs to add
 
 interface RecommendResponse {
@@ -27,8 +27,9 @@ interface RecommendResponse {
   data: any[]; // Array of songs directly
 }
 
-export const useAutoQueue = (enabled: boolean = true) => {
+export const useAutoQueue = () => {
   const { queue } = usePlayerStore();
+  const { autoQueueEnabled: enabled, autoQueueThreshold: threshold } = useUserSettings();
   const isFetchingRef = useRef(false);
   const lastFetchedSongIdRef = useRef<string | null>(null);
   const addedSongIdsRef = useRef<Set<string>>(new Set());
@@ -92,29 +93,11 @@ export const useAutoQueue = (enabled: boolean = true) => {
   };
 
   useEffect(() => {
-    console.log('🔍 Auto-Queue: Effect triggered', {
-      enabled,
-      currentTrack: currentTrack?.title,
-      trackId: currentTrack?.id,
-      queueLength: queue.length,
-    });
-
-    if (!enabled) {
-      console.log('🔍 Auto-Queue: Disabled, skipping');
-      return;
-    }
-    
-    if (!currentTrack) {
-      console.log('🔍 Auto-Queue: No current track, skipping');
-      return;
-    }
+    if (!enabled || !currentTrack) return;
 
     const checkAndFetchSimilar = async () => {
       // Don't fetch if already fetching
-      if (isFetchingRef.current) {
-        console.log('🔍 Auto-Queue: Already fetching, skipping');
-        return;
-      }
+      if (isFetchingRef.current) return;
 
       // Get current index synchronously
       const currentIndex = AudioPro.getCurrentMediaItemIndex();
@@ -122,70 +105,38 @@ export const useAutoQueue = (enabled: boolean = true) => {
       // Calculate remaining songs
       const remainingSongs = queue.length - currentIndex - 1;
 
-      console.log('🔍 Auto-Queue: State check', {
-        queueLength: queue.length,
-        currentIndex,
-        remainingSongs,
-        threshold: TRIGGER_THRESHOLD,
-      });
-
-      // Trigger conditions:
-      // 1. Single-song queue (length === 1) - fetch immediately to populate queue
-      // 2. Multi-song queue - fetch when nearing end (3rd-to-last or closer, but not at the very last)
-      const isSingleSongQueue = queue.length === 1;
-      const shouldFetch = isSingleSongQueue 
-        ? true // Always fetch for single-song queues
-        : remainingSongs <= TRIGGER_THRESHOLD && remainingSongs > 0;
-
-      console.log('🔍 Auto-Queue: Should fetch?', {
-        isSingleSongQueue,
-        shouldFetch,
-        reason: isSingleSongQueue 
-          ? 'Single song queue'
-          : shouldFetch 
-          ? `${remainingSongs} songs remaining (threshold: ${TRIGGER_THRESHOLD})`
-          : 'Not near end of queue',
-      });
+      // Trigger condition:
+      // If we are at or below the threshold, fetch!
+      // (remainingSongs === 0 means we are playing the very last song)
+      const shouldFetch = remainingSongs <= threshold;
 
       if (shouldFetch) {
         // Don't fetch if already fetched for this song
         if (lastFetchedSongIdRef.current === currentTrack.id) {
-          console.log('🔍 Auto-Queue: Already fetched for this song, skipping', {
-            songId: currentTrack.id,
-            songTitle: currentTrack.title,
-          });
           return;
         }
 
-        console.log(`🎵 Auto-Queue: ===== FETCH INITIATED =====`);
-        console.log(`🎵 Auto-Queue: Song: "${currentTrack.title}" (${currentTrack.id})`);
-        console.log(`🎵 Auto-Queue: Remaining songs: ${remainingSongs}`);
-        console.log(`🎵 Auto-Queue: Queue length: ${queue.length}`);
-        
+        console.log(`🎵 Auto-Queue: TRIGGERED`);
+        console.log(`🎵 Auto-Queue: Remaining songs: ${remainingSongs} (threshold: ${threshold})`);
+
         isFetchingRef.current = true;
         lastFetchedSongIdRef.current = currentTrack.id;
 
         try {
           const songsAdded = await fetchRecommendations(currentTrack);
-
-          if (songsAdded === 0) {
-            console.log('🎵 Auto-Queue: ❌ FAILED - No recommendations added');
-          } else {
-            console.log(`🎵 Auto-Queue: ✅ SUCCESS - Added ${songsAdded} songs to queue`);
+          if (songsAdded > 0) {
+            console.log(`🎵 Auto-Queue: ✅ SUCCESS - Added ${songsAdded} songs`);
           }
         } catch (error) {
-          console.error('🎵 Auto-Queue: 💥 Unexpected error:', error);
+          console.error('🎵 Auto-Queue: 💥 Error:', error);
         } finally {
           isFetchingRef.current = false;
-          console.log(`🎵 Auto-Queue: ===== FETCH COMPLETE =====\n`);
         }
-      } else {
-        console.log(`🔍 Auto-Queue: Not fetching - conditions not met\n`);
       }
     };
 
     checkAndFetchSimilar();
-  }, [currentTrack, queue, enabled]);
+  }, [currentTrack, queue, enabled, threshold]);
 
   // Reset tracking when queue is cleared
   useEffect(() => {

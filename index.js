@@ -19,6 +19,7 @@ AudioPro.configure({
   contentType: AudioProContentType.MUSIC,
   cacheEnabled: true,
   maxCacheSize: 2048 * 1024 * 1024,
+  
 });
 
 debugLogger.log('SYSTEM', 'AudioPro Configured');

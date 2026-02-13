@@ -4,12 +4,12 @@ import {
   ActivityIndicator,
   Pressable,
   ScrollView,
-  Switch,
   TouchableOpacity,
   View
 } from 'react-native';
 import { AudioPro } from 'react-native-audio-pro';
 import SquircleView from 'react-native-fast-squircle';
+import Animated, { interpolateColor, useAnimatedStyle, useDerivedValue, withSpring } from 'react-native-reanimated';
 import { Routes } from '../app/navigation/routes';
 import { SafeView } from '../components/common/SafeView';
 import { Sheet, SheetRef } from '../components/common/Sheet';
@@ -20,12 +20,11 @@ import {
   HeartFill,
   InfoCircle,
   Play,
+  Restart,
   Share,
   ShieldCheck,
   TrashBin2,
-  UsersGroupRounded,
-  Widget2,
-  Wifi
+  UsersGroupRounded
 } from '../components/common/SolarIcons.generated';
 import { Text } from '../components/common/Text';
 import { useLanguages } from '../hooks/useLanguages';
@@ -143,7 +142,59 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
     backgroundColor: theme.colors.bgSurfaceHover,
     marginTop: s.mScale(12),
   },
+  // Custom Switch Styles
+  switchTrack: {
+    width: s.mScale(40),
+    height: s.mScale(22),
+    borderRadius: s.mScale(11),
+    padding: s.mScale(2),
+    justifyContent: 'center',
+  },
+  switchThumb: {
+    width: s.mScale(18),
+    height: s.mScale(18),
+    borderRadius: s.mScale(9),
+    backgroundColor: '#FFFFFF',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.2,
+  },
 }));
+
+const ToggleSwitch = ({ value, onValueChange }: { value: boolean; onValueChange: (val: boolean) => void }) => {
+  const theme = useTheme();
+  const { colors } = theme;
+  const styles = useScalingStyles(createStyles, theme);
+
+  const progress = useDerivedValue(() => {
+    return withSpring(value ? 1 : 0, {
+      damping: 20,
+      stiffness: 200,
+    });
+  });
+
+  const trackStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(
+      progress.value,
+      [0, 1],
+      [colors.bgSurfaceHover, colors.primaryBase]
+    ),
+  }));
+
+  const thumbStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: progress.value * 18 }]
+  }));
+
+  return (
+    <Pressable onPress={() => onValueChange(!value)}>
+      <Animated.View style={[styles.switchTrack, trackStyle]}>
+        <Animated.View style={[styles.switchThumb, thumbStyle]} />
+      </Animated.View>
+    </Pressable>
+  );
+};
 
 interface SettingsItemProps {
   icon: React.ReactNode;
@@ -182,12 +233,9 @@ const SettingsItem = ({
       </View>
 
       {showSwitch ? (
-        <Switch
-          value={switchValue}
-          onValueChange={onSwitchChange}
-          trackColor={{ false: colors.bgSurfaceHover, true: colors.primaryBase }}
-          thumbColor="#FFF"
-          style={{ transform: [{ scale: 0.7 }] }}
+        <ToggleSwitch
+          value={!!switchValue}
+          onValueChange={(val) => onSwitchChange?.(val)}
         />
       ) : (
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -234,14 +282,17 @@ const SettingsScreen = () => {
     downloadQuality,
     setStreamingQuality,
     setDownloadQuality,
-    skipSilence,
-    setSkipSilence,
+    autoQueueEnabled,
+    setAutoQueueEnabled,
+    autoQueueThreshold,
+    setAutoQueueThreshold,
   } = useUserSettings();
 
   const { data: languagesData } = useLanguages();
 
   const langSheetRef = useRef<SheetRef>(null);
   const qualitySheetRef = useRef<SheetRef>(null);
+  const thresholdSheetRef = useRef<SheetRef>(null);
   const confirmSheetRef = useRef<SheetRef>(null);
 
   const [qualityType, setQualityType] = useState<'streaming' | 'download'>('streaming');
@@ -295,7 +346,7 @@ const SettingsScreen = () => {
           <Text style={styles.sectionLabel}>Music & Content</Text>
           <SquircleView style={styles.itemsWrapper} cornerSmoothing={1}>
             <SettingsItem
-              icon={<Widget2 size={18} color={colors.primaryBase} />}
+              icon={<MusicNote size={18} color={colors.primaryBase} />}
               label="Music Languages"
               value={selectedLangs.length > 2
                 ? `${selectedLangs.length} Selected`
@@ -341,23 +392,28 @@ const SettingsScreen = () => {
           </SquircleView>
         </View>
 
-        {/* Playback Experience
+        {/* Playback Experience */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Playback Experience</Text>
           <SquircleView style={styles.itemsWrapper} cornerSmoothing={1}>
             <SettingsItem
-              icon={<MusicNote size={18} color={colors.primaryBase} />}
-              label="Skip Silence"
+              icon={<Restart size={18} color={colors.primaryBase} />}
+              label="Auto-Queue"
               showSwitch
-              switchValue={skipSilence}
-              onSwitchChange={(val) => {
-                setSkipSilence(val);
-                AudioPro.setSkipSilence(val);
-              }}
-              isLast
+              switchValue={autoQueueEnabled}
+              onSwitchChange={setAutoQueueEnabled}
             />
+            {autoQueueEnabled && (
+              <SettingsItem
+                icon={<BillList size={18} color={colors.primaryBase} />}
+                label="Queue Threshold"
+                value={`${autoQueueThreshold} ${autoQueueThreshold === 1 ? 'song' : 'songs'}`}
+                onPress={() => thresholdSheetRef.current?.present()}
+                isLast
+              />
+            )}
           </SquircleView>
-        </View> */}
+        </View>
 
         {/* Storage & Data */}
         <View style={styles.section}>
@@ -453,7 +509,43 @@ const SettingsScreen = () => {
         </View>
       </Sheet>
 
-      {/* Quality Selection Sheet */}
+      {/* Threshold Selection Sheet */}
+      <Sheet ref={thresholdSheetRef} sizes={['auto']}>
+        <View style={{ paddingBottom: 40 }}>
+          <View style={styles.sheetHeader}>
+            <Text variant="h2" style={{ marginBottom: 4 }}>Queue Threshold</Text>
+            <Text variant="body" color="secondary" style={{ textAlign: 'center', paddingHorizontal: 20 }}>
+              Number of songs remaining in queue before fetching more recommendations.
+            </Text>
+          </View>
+          {[1, 2, 3, 4, 5].map((val, idx, arr) => {
+            const isSelected = autoQueueThreshold === val;
+            const isLastItem = idx === arr.length - 1;
+
+            return (
+              <TouchableOpacity
+                key={val}
+                style={[styles.sheetOption, isLastItem && { borderBottomWidth: 0 }]}
+                onPress={() => {
+                  setAutoQueueThreshold(val);
+                  thresholdSheetRef.current?.dismiss();
+                }}
+              >
+                <Text
+                  variant="h3"
+                  style={{
+                    fontFamily: isSelected ? fontNames.bold : fontNames.medium,
+                    color: isSelected ? colors.primaryBase : colors.textPrimary
+                  }}
+                >
+                  {val} {val === 1 ? 'Song' : 'Songs'}
+                </Text>
+                {isSelected && <CheckCircle size={22} color={colors.primaryBase} />}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </Sheet>
       <Sheet ref={qualitySheetRef} sizes={['auto']}>
         <View style={{ paddingBottom: 40 }}>
           <View style={styles.sheetHeader}>

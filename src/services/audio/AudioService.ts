@@ -223,6 +223,16 @@ class AudioService {
     mmkv.remove(STORAGE_KEYS.CURRENT_INDEX);
     mmkv.remove(STORAGE_KEYS.POSITION);
   }
+
+  reorderMediaItem(fromIndex: number, toIndex: number) {
+    AudioPro.moveMediaItem(fromIndex, toIndex);
+    this.persistQueue();
+  }
+
+  skipToTrack(index: number) {
+    AudioPro.seekToMediaItem(index);
+    AudioPro.play();
+  }
 }
 
 export const audioService = AudioService.getInstance();

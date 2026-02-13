@@ -12,12 +12,12 @@ import {
   BillList,
   CloseCircle,
   HeartFill,
+  Layers,
   Magnifer,
   MenuDots,
   MusicNote,
   User,
-  UsersGroupRounded,
-  Widget2
+  UsersGroupRounded
 } from '../components/common/SolarIcons.generated';
 import { LibraryItem as LibraryItemType, useLibraryStore } from '../store/useLibraryStore';
 import { usePlayer } from '../store/usePlayerStore';
@@ -478,7 +478,7 @@ export const LibraryScreen = () => {
           {isGridView ? (
             <BillList size={22} color={colors.textPrimary} />
           ) : (
-            <Widget2 size={22} color={colors.textPrimary} />
+            <Layers size={22} color={colors.textPrimary} />
           )}
         </Pressable>
       </View>

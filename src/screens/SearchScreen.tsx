@@ -408,6 +408,16 @@ const SearchScreen = () => {
                   const songsSection = searchResults?.data?.find((s: any) => s?.heading?.toLowerCase() === 'songs');
                   const songResults = Array.isArray(songsSection?.data) ? songsSection.data : [];
 
+                  const handleMoreSongs = () => {
+                    const sectionId = `songs-${Date.now()}`;
+                    sectionDataStore.setData(sectionId, songResults);
+                    stateNavigator.navigate(Routes.SectionDetail, {
+                      title: 'Songs',
+                      sectionId,
+                      provider: 'unified',
+                    });
+                  };
+
                   const otherSections = searchResults?.data?.filter((s: any) =>
                     s?.heading &&
                     !['topquery', 'top results', 'songs'].includes(s.heading.toLowerCase()) &&
@@ -435,6 +445,8 @@ const SearchScreen = () => {
                         <View style={styles.searchResultsSection}>
                           <SectionHeader
                             title="Songs"
+                            action={songResults.length > 5 ? 'More' : undefined}
+                            onActionPress={handleMoreSongs}
                             style={{ marginBottom: 16, paddingHorizontal: 0, marginTop: 0 }}
                           />
                           {songResults.slice(0, 5).map((item: SaavnItem) => (

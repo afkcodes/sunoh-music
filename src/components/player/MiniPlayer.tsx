@@ -1,5 +1,6 @@
 import React, { memo, useCallback, useMemo } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { AudioProState } from 'react-native-audio-pro';
 import LinearGradient from 'react-native-linear-gradient';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -75,7 +76,7 @@ export const MiniPlayer = memo(({ onPress }: { onPress?: () => void }) => {
   const { colors, scale: s } = useTheme();
   const theme = { colors, scale: s } as AppTheme;
   const styles = useScalingStyles(createStyles, theme);
-  const { currentTrack, isPlaying, togglePlayPause, next, previous } = usePlayer();
+  const { currentTrack, isPlaying, togglePlayPause, next, previous, isFetching, playerState } = usePlayer();
   const insets = useSafeAreaInsets();
   const { playerTheme, gradientColors } = useArtworkTheme(currentTrack?.artwork);
   const { position, duration } = useTrackProgress();
@@ -176,7 +177,9 @@ export const MiniPlayer = memo(({ onPress }: { onPress?: () => void }) => {
               </Pressable>
 
               <Pressable style={playBtnStyle} onPress={handlePlayPause}>
-                {isPlaying ? (
+                {isFetching || playerState === AudioProState.LOADING ? (
+                  <ActivityIndicator size="small" color={playerTheme?.onPrimaryContainer ?? colors.textPrimary} />
+                ) : isPlaying ? (
                   <Pause size={28} color={playerTheme?.onPrimaryContainer ?? colors.textPrimary} />
                 ) : (
                   <Play size={28} color={playerTheme?.onPrimaryContainer ?? colors.textPrimary} />
