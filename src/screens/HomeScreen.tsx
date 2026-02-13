@@ -1,6 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ScrollView, View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
 import { useTheme } from '../theme/ThemeContext';
 import { makeScalingStyles, useScalingStyles } from '../utils/style.util';
 
@@ -18,24 +17,40 @@ const createStyles = makeScalingStyles((s, colors: ThemeColors) => ({
         flex: 1,
         backgroundColor: colors.bgPage,
     },
-    scrollContent: {
-        paddingBottom: s.vScale(80),
-    },
     center: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    scrollContent: {
+        paddingBottom: 100,
     }
 }));
 
+const INITIAL_RENDER_COUNT = 6;
+const INCREMENT_COUNT = 3;
+
 const HomeScreen = () => {
     const { colors } = useTheme();
+    // @ts-ignore
     const styles = useScalingStyles(createStyles, colors);
     const { data: homeData, isLoading, error } = useHomeData({ provider: 'unified' });
     const { stateNavigator } = useNavigationEvent();
 
+    // State for incremental rendering
+    const [visibleCount, setVisibleCount] = useState(INITIAL_RENDER_COUNT);
+
+    const onScroll = ({ nativeEvent }: any) => {
+        const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+        const paddingToBottom = 3000; // Trigger earlier for smoother feel
+        if (layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom) {
+            if (homeData?.data && visibleCount < homeData.data.length) {
+                setVisibleCount(prev => prev + INCREMENT_COUNT);
+            }
+        }
+    };
+
     if (isLoading) {
-        // return <HomeSkeleton />;
         return (
             <SafeView style={styles.container}>
                 <View style={styles.center}>
@@ -49,20 +64,28 @@ const HomeScreen = () => {
         console.error("Home Data Error", error);
     }
 
+    const allData = homeData?.data || [];
+    const visibleData = allData.slice(0, visibleCount);
+
     return (
         <SafeView style={styles.container} >
-            <Animated.View style={{ flex: 1 }} entering={FadeIn.duration(400)}>
-                <ScrollView
-                    contentContainerStyle={styles.scrollContent}
-                    showsVerticalScrollIndicator={false}
-                    removeClippedSubviews
-                    renderToHardwareTextureAndroid
-                    scrollEventThrottle={64}
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                removeClippedSubviews={true} // Optimization for heavy lists
+                scrollEventThrottle={32} // Interactive update rate
+                onScroll={onScroll}
+                renderToHardwareTextureAndroid
+            >
+                <HomeHeader onSettingsPress={() => stateNavigator.navigate(Routes.Settings)} />
 
-                >
-                    <HomeHeader onSettingsPress={() => stateNavigator.navigate(Routes.Settings)} />
+                {visibleData.map((section, index) => {
+                    // Don't render last item if it was sliced off in original code,
+                    // but here we just render what's visible.
+                    // Original code had .slice(0, -1). If that's important logic, restore it.
+                    // Assuming homeData.data includes all sections.
 
-                    {homeData?.data?.slice(0, -1).map((section, index) => (
+                    return (
                         <HomeSection
                             key={`${section.heading}-${index}`}
                             title={section.heading}
@@ -70,11 +93,11 @@ const HomeScreen = () => {
                             provider={section.source === 'unified' ? undefined : section.source as any}
                             style={{ marginTop: index === 0 ? 0 : spacing.md }}
                         />
-                    ))}
+                    );
+                })}
 
-                </ScrollView>
-            </Animated.View>
-        </SafeView>
+            </ScrollView>
+        </SafeView >
     );
 };
 

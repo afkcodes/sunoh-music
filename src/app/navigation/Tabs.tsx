@@ -9,12 +9,15 @@ import { Routes } from './routes';
 
 // Screens
 import { AlbumScreen } from '../../screens/AlbumScreen';
+import { DebugLogsScreen } from '../../screens/DebugLogsScreen';
 import HomeScreen from '../../screens/HomeScreen';
 import LibraryScreen from '../../screens/LibraryScreen';
+import { LikedSongsScreen } from '../../screens/LikedSongsScreen';
 import { PlaylistScreen } from '../../screens/PlaylistScreen';
 import SearchScreen from '../../screens/SearchScreen';
 import { SectionDetailScreen } from '../../screens/SectionDetailScreen';
 import SettingsScreen from '../../screens/SettingsScreen';
+import { SongScreen } from '../../screens/SongScreen';
 
 // Assets
 const HomeIcon = require('../../assets/images/home.png');
@@ -40,6 +43,9 @@ export const Tabs = () => {
       activeIndicatorColor={activeIndicatorColor}
       unselectedTintColor={colors.textSecondary as string}
       labelVisibilityMode="labeled"
+      preventFouc
+      scrollsToTop
+
     >
       <TabBarItem
         title="Home"
@@ -64,6 +70,9 @@ export const Tabs = () => {
             <Scene stateKey={Routes.Album}>
               <AlbumScreen />
             </Scene>
+            <Scene stateKey={Routes.Song}>
+              <SongScreen />
+            </Scene>
             <Scene stateKey={Routes.SectionDetail}>
               <SectionDetailScreen />
             </Scene>
@@ -72,6 +81,9 @@ export const Tabs = () => {
             </Scene>
             <Scene stateKey={Routes.Settings}>
               <SettingsScreen />
+            </Scene>
+            <Scene stateKey={Routes.DebugLogs}>
+              <DebugLogsScreen />
             </Scene>
             <Scene stateKey={Routes.Details}>
               {/* Placeholder for Details if needed later */}
@@ -106,6 +118,9 @@ export const Tabs = () => {
             <Scene stateKey={Routes.Album}>
               <AlbumScreen />
             </Scene>
+            <Scene stateKey={Routes.Song}>
+              <SongScreen />
+            </Scene>
             <Scene stateKey={Routes.SectionDetail}>
               <SectionDetailScreen />
             </Scene>
@@ -138,6 +153,15 @@ export const Tabs = () => {
             </Scene>
             <Scene stateKey={Routes.Playlist}>
               <PlaylistScreen />
+            </Scene>
+            <Scene stateKey={Routes.Album}>
+              <AlbumScreen />
+            </Scene>
+            <Scene stateKey={Routes.Song}>
+              <SongScreen />
+            </Scene>
+            <Scene stateKey={Routes.LikedSongs}>
+              <LikedSongsScreen />
             </Scene>
           </NavigationStack>
         </NavigationHandler>

@@ -10,6 +10,7 @@ import TurboImage from 'react-native-turbo-image';
 
 import { borderRadius, springs, ThemeColors } from '../../theme';
 import { useTheme } from '../../theme/ThemeContext';
+import { useScalingDebug } from '../../utils/debug.scaling';
 import { makeScalingStyles, useScalingStyles } from '../../utils/style.util';
 import { MusicNote } from './SolarIcons.generated';
 import { Text } from './Text';
@@ -24,18 +25,18 @@ interface MediaCardProps {
   style?: StyleProp<ViewStyle>;
 }
 
+// ✅ FIXED: Remove width from base styles since it's dynamic
 const createStyles = makeScalingStyles((s, colors: ThemeColors) => ({
   container: {
-    width: s.mScale(144), // Default width
+    // width removed - will be set via prop
     gap: s.mScale(8),
   },
   imageContainer: {
     width: '100%',
-    // aspectRatio: 1, // Removed to prevent potential layout oscillation with explicit height
+    height: '100%',
     backgroundColor: colors.bgSurfaceHover,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: s.mScale(borderRadius.lg),
     overflow: 'hidden',
   },
   image: {
@@ -44,6 +45,7 @@ const createStyles = makeScalingStyles((s, colors: ThemeColors) => ({
   },
   textContainer: {
     gap: s.mScale(2),
+    marginTop: s.mScale(12), // ✅ FIXED: Scaled instead of hard-coded
   },
 }));
 
@@ -80,8 +82,61 @@ export const MediaCard: React.FC<MediaCardProps> = memo(({
 
   const isCircle = variant === 'circle';
 
+  // ✅ FIXED: Calculate scaled size once
+  const scaledSize = s.mScale(size);
+  const debug = useScalingDebug('MediaCard');
+  const containerRef = React.useRef<View>(null);
+
+  React.useEffect(() => {
+    debug('Render', {
+      props: {
+        title: title.slice(0, 20) + '...',
+        size,
+        variant,
+      },
+      computed: {
+        scaledSize,
+        'imageContainer width': '100%',
+        'imageContainer height': '100%',
+        'imageWrapper explicit width': s.mScale(size),
+        'imageWrapper explicit height': s.mScale(size),
+      },
+      calculations: {
+        'Input size': size,
+        'mScale(size)': s.mScale(size),
+        'scale(size)': s.scale(size),
+        'vScale(size)': s.vScale(size),
+        'Difference (mScale - input)': s.mScale(size) - size,
+        'Ratio (mScale/input)': (s.mScale(size) / size).toFixed(3),
+        'Expected on POCO (~150px)': s.mScale(144),
+      },
+      styles: {
+        'container.gap': styles.container.gap,
+        'imageContainer.backgroundColor': styles.imageContainer.backgroundColor,
+        'textContainer.gap': styles.textContainer.gap,
+        'textContainer.marginTop': styles.textContainer.marginTop,
+      },
+    });
+  }, [size, scaledSize, debug, s, styles, title, variant]);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      containerRef.current?.measure((x, y, width, height, pageX, pageY) => {
+        console.log('🎯 ACTUAL RENDERED SIZE:', {
+          title: title.slice(0, 20),
+          expectedWidth: scaledSize,
+          actualWidth: width,  // ← This is the rendered width!
+          actualHeight: height,
+          difference: width - scaledSize,
+        });
+      });
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [scaledSize, title]);
+
   return (
-    <Animated.View style={[styles.container, style, { width: s.mScale(size) }]}>
+    <Animated.View style={[styles.container, { width: scaledSize }, style]}>
       <Pressable
         onPress={onPress}
         onPressIn={handlePressIn}
@@ -89,19 +144,12 @@ export const MediaCard: React.FC<MediaCardProps> = memo(({
         style={{ flex: 1 }}
       >
         <Animated.View style={[animatedStyle]}>
-          {/* Artwork */}
-          {/* Artwork Wrapper to enforce layout reservation */}
-          <View style={{ width: s.mScale(size), height: s.mScale(size) }}>
+          {/* Artwork Wrapper */}
+          <View style={{ width: scaledSize, height: scaledSize }}>
             <SquircleView
               style={[
                 styles.imageContainer,
-                {
-                  backgroundColor: colors.bgSurfaceHover,
-                  flex: 1, // Fill the wrapper
-                  width: '100%',
-                  height: '100%',
-                },
-                isCircle ? { borderRadius: 9999 } : {}
+                isCircle ? { borderRadius: 9999 } : { borderRadius: s.mScale(borderRadius.lg) }
               ]}
               cornerSmoothing={isCircle ? 0 : 1}
             >
@@ -112,7 +160,7 @@ export const MediaCard: React.FC<MediaCardProps> = memo(({
                   resizeMode="cover"
                 />
               ) : (
-                <MusicNote size={32} color={colors.textSecondary} />
+                <MusicNote size={s.mScale(32)} color={colors.textSecondary} />
               )}
             </SquircleView>
           </View>
@@ -121,7 +169,6 @@ export const MediaCard: React.FC<MediaCardProps> = memo(({
           <View style={[
             styles.textContainer,
             {
-              marginTop: 12,
               alignItems: isCircle ? 'center' : 'flex-start'
             }
           ]}>

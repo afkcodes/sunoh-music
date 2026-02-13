@@ -1,4 +1,13 @@
 const dataConfigs = {
+  song: {
+    id: 'id',
+    title: ['title', 'name'],
+    subtitle: ['subtitle', 'artists', 'language', 'type'],
+    image: ['image.2.link', 'image.0.link', 'artwork', 'atw', 'atwj'],
+    artists: 'artists',
+    duration: 'duration',
+    token: ['token', 'id'],
+  },
   album: {
     id: 'id',
     title: ['title', 'name'],

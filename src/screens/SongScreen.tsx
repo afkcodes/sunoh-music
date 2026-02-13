@@ -14,7 +14,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TurboImage from 'react-native-turbo-image';
-import { SongListItem } from '../components/album/SongListItem';
 import { SafeView } from '../components/common';
 import LogoAnimation from '../components/common/Loader';
 import {
@@ -25,16 +24,14 @@ import {
   Pause,
   Play,
   Share,
-  Shuffle,
 } from '../components/common/SolarIcons.generated';
 import { Text } from '../components/common/Text';
 import { HomeSection } from '../components/home/HomeSection';
-import { useAlbumData } from '../hooks/useAlbumData';
+import { useSongData } from '../hooks/useSongData';
 import { useLibraryStore } from '../store/useLibraryStore';
 import { usePlayer } from '../store/usePlayerStore';
 import { borderRadius, fontNames, spacing, ThemeColors } from '../theme';
 import { useTheme } from '../theme/ThemeContext';
-import { Song } from '../types/album';
 import { decodeHtmlEntities } from '../utils/htmlDecode';
 import { makeScalingStyles, useScaling, useScalingStyles } from '../utils/style.util';
 import { mapSongToTrack } from '../utils/trackMapping';
@@ -142,17 +139,6 @@ const createStyles = makeScalingStyles((s, colors: ThemeColors) => ({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  songList: {
-    flex: 1,
-  },
-  songListContent: {
-    paddingBottom: s.mScale(spacing.xl),
-  },
-  separator: {
-    height: s.mScale(1),
-    backgroundColor: colors.borderSubtle,
-    marginLeft: s.mScale(60),
-  },
   stickyHeader: {
     position: 'absolute',
     top: 0,
@@ -177,6 +163,10 @@ const createStyles = makeScalingStyles((s, colors: ThemeColors) => ({
   sectionsContainer: {
     gap: s.mScale(spacing.md),
   },
+  emptyState: {
+    paddingVertical: s.mScale(spacing.xl * 2),
+    alignItems: 'center',
+  },
 }));
 
 // ============================================================================
@@ -184,26 +174,24 @@ const createStyles = makeScalingStyles((s, colors: ThemeColors) => ({
 // ============================================================================
 
 /**
- * Memoized Album Header Component
- * Only re-renders when album data actually changes
+ * Memoized Song Header Component
+ * Only re-renders when song data actually changes
  */
-const AlbumHeader = React.memo<{
-  album: any;
+const SongHeader = React.memo<{
+  song: any;
   imageUrl: string;
   artworkAnimatedStyle: any;
   colors: ThemeColors;
   styles: any;
-  handlePlayAll: () => void;
+  handlePlay: () => void;
   toggleLike: () => void;
   isLiked: boolean;
-  shuffleMode: boolean;
-  toggleShuffle: () => void;
   isPlaying: boolean;
-  isCurrentAlbumContext: boolean;
+  isCurrentSong: boolean;
 }>(
-  ({ album, imageUrl, artworkAnimatedStyle, colors, styles, handlePlayAll, toggleLike, isLiked, shuffleMode, toggleShuffle, isPlaying, isCurrentAlbumContext }) => {
-    // Logic: If playing AND one of the album's songs is current -> Pause, else Play
-    const showPause = isPlaying && isCurrentAlbumContext;
+  ({ song, imageUrl, artworkAnimatedStyle, colors, styles, handlePlay, toggleLike, isLiked, isPlaying, isCurrentSong }) => {
+    // Logic: If playing AND this is the current song -> Pause, else Play
+    const showPause = isPlaying && isCurrentSong;
 
     return (
       <View style={styles.header}>
@@ -225,7 +213,7 @@ const AlbumHeader = React.memo<{
 
         {/* Hero Content */}
         <View style={styles.heroContent}>
-          {/* Album Artwork */}
+          {/* Song Artwork */}
           <Animated.View style={[styles.artworkContainer, artworkAnimatedStyle]}>
             <TurboImage
               source={{ uri: imageUrl }}
@@ -235,27 +223,28 @@ const AlbumHeader = React.memo<{
             />
           </Animated.View>
 
-          {/* Album Metadata */}
+          {/* Song Metadata */}
           <View style={styles.metadata}>
             <Text variant="h1" center numberOfLines={2} style={{ fontFamily: fontNames.bold }}>
-              {decodeHtmlEntities(album?.title || '')}
+              {decodeHtmlEntities(song?.title || '')}
             </Text>
             <Text variant="body" style={{ textAlign: 'center' }} color="secondary" numberOfLines={2}>
-              {decodeHtmlEntities(album?.subtitle || '')}
+              {decodeHtmlEntities(song?.subtitle || '')}
             </Text>
             <View style={styles.metaRow}>
-              {(album?.year || album?.releaseDate) && (
+              {song?.year && (
                 <>
                   <Text variant="caption" color="secondary">
-                    {decodeHtmlEntities(album?.year || album?.releaseDate || '')}
+                    {decodeHtmlEntities(song.year)}
                   </Text>
                   <View style={styles.dot} />
                 </>
               )}
-              <Text variant="caption" color="secondary">
-                {album?.songCount || album?.listCount || (album?.songs?.length || 0).toString()}{' '}
-                {parseInt(album?.songCount || album?.listCount || (album?.songs?.length || 0).toString()) === 1 ? 'Song' : 'Songs'}
-              </Text>
+              {song?.duration && (
+                <Text variant="caption" color="secondary">
+                  {song.duration}
+                </Text>
+              )}
             </View>
           </View>
 
@@ -276,18 +265,12 @@ const AlbumHeader = React.memo<{
                 )}
               </Pressable>
 
-
               <Pressable onPress={() => console.log('Share pressed')} style={styles.iconButton}>
                 <Share size={24} color={colors.textPrimary} />
               </Pressable>
 
-              <Pressable onPress={toggleShuffle} style={styles.iconButton}>
-                <Shuffle size={24} color={shuffleMode ? colors.primaryBase : colors.textPrimary} />
-              </Pressable>
-
-
               <Pressable
-                onPress={handlePlayAll}
+                onPress={handlePlay}
                 style={({ pressed }) => [styles.playButton, pressed && { opacity: 0.8 }]}
               >
                 {showPause ? (
@@ -305,37 +288,45 @@ const AlbumHeader = React.memo<{
   (prevProps, nextProps) => {
     // Custom comparison - only re-render if these change
     return (
-      prevProps.album?.id === nextProps.album?.id &&
+      prevProps.song?.id === nextProps.song?.id &&
       prevProps.imageUrl === nextProps.imageUrl &&
       prevProps.colors === nextProps.colors &&
       prevProps.isLiked === nextProps.isLiked &&
-      prevProps.shuffleMode === nextProps.shuffleMode &&
       prevProps.isPlaying === nextProps.isPlaying &&
-      prevProps.isCurrentAlbumContext === nextProps.isCurrentAlbumContext
+      prevProps.isCurrentSong === nextProps.isCurrentSong
     );
   }
 );
 
-AlbumHeader.displayName = 'AlbumHeader';
+SongHeader.displayName = 'SongHeader';
 
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
-export const AlbumScreen: React.FC = () => {
+export const SongScreen: React.FC = () => {
   const { colors } = useTheme();
   const styles = useScalingStyles(createStyles, colors);
   const { data, stateNavigator } = useNavigationEvent();
-  const albumId = data.albumId as string;
+  const songId = data.songId as string;
   const provider = (data.provider as any) || 'saavn';
-  const { data: albumData, isLoading, error } = useAlbumData(albumId, provider);
+  const { data: songData, isLoading, error } = useSongData(songId, provider);
   const s = useScaling();
 
-  const album = albumData?.data?.album || albumData?.data?.playlist || albumData?.data;
-  const sections = albumData?.data?.sections || album?.sections || [];
+  // Extract song and sections from response
+  const song = songData?.data;
+  const sections = song?.sections || [];
+
+  console.log('🎵 SongScreen - API Response:', {
+    hasSongData: !!song,
+    songId: song?.id,
+    songTitle: song?.title,
+    sectionsCount: sections.length,
+    sectionHeadings: sections.map((s: any) => s.heading),
+  });
 
   // Use last item in array for imagery
-  const imagery = album?.image || album?.artwork || [];
+  const imagery = song?.image || song?.artwork || [];
   const imageUrl = Array.isArray(imagery) ? imagery[imagery.length - 1]?.link || '' : imagery || '';
 
   // ============================================================================
@@ -421,8 +412,6 @@ export const AlbumScreen: React.FC = () => {
   }, []);
 
   // 3. Icon color cross-fade
-
-  // Theme/Dark icon fades IN as we scroll UP past threshold
   const iconThemeAnimatedStyle = useAnimatedStyle(() => {
     'worklet';
     const opacity = interpolate(
@@ -435,143 +424,117 @@ export const AlbumScreen: React.FC = () => {
   }, []);
 
   // ============================================================================
-  // MEMOIZED CALLBACKS
-  // ============================================================================
-
-  // ============================================================================
   // HOOKS & STATE
   // ============================================================================
 
-  const { playQueue, setShuffleMode, shuffleMode, currentTrack, isPlaying, togglePlayPause } = usePlayer();
-  const { isLiked, toggleLikeAlbum } = useLibraryStore();
+  const { play, playQueue, currentTrack, isPlaying, togglePlayPause } = usePlayer();
+  const { isLiked, toggleLikeSong } = useLibraryStore();
 
-  const isAlbumLiked = isLiked(albumId, 'album');
+  const isSongLiked = isLiked(songId, 'song');
 
-  // Robust check: Is the currently playing track part of this album?
-  // We use allSongs derived from the album data.
-  const allSongs = useMemo(() => album?.songs || album?.list || [], [album]);
-
-  const isCurrentAlbumContext = useMemo(() => {
-    if (!currentTrack || !allSongs.length) return false;
-    return allSongs.some((s: any) => s.id === currentTrack.id);
-  }, [currentTrack, allSongs]);
-
-  const toggleShuffle = useCallback(() => {
-    setShuffleMode(!shuffleMode);
-  }, [shuffleMode, setShuffleMode]);
+  // Check if the currently playing track is this song
+  const isCurrentSong = useMemo(() => {
+    if (!currentTrack || !song) return false;
+    return currentTrack.id === song.id;
+  }, [currentTrack, song]);
 
   const toggleFavorite = useCallback(() => {
-    if (album) {
-      toggleLikeAlbum({
-        id: album.id,
-        type: 'album',
-        title: album.title || album.name,
-        image: imageUrl, // Use the resolved image URL
-        subtitle: album.subtitle || album.artist || album.description,
+    if (song) {
+      toggleLikeSong({
+        id: song.id,
+        type: 'song',
+        title: song.title || song.name,
+        image: imageUrl,
+        subtitle: song.subtitle || song.artist || song.description,
         timestamp: Date.now(),
         provider: provider,
       });
     }
-  }, [album, imageUrl, toggleLikeAlbum, provider]);
+  }, [song, imageUrl, toggleLikeSong, provider]);
 
-  const handlePlaySong = useCallback((song: Song) => {
-    console.log('Play song:', song.title);
+  const handlePlay = useCallback(() => {
+    console.log('Play song:', song?.title);
 
-    // 1. Get all songs as tracks
-    // allSongs is already memoized above
-    const tracks = allSongs.map(mapSongToTrack);
-
-    // 2. Find index of clicked song
-    const index = tracks.findIndex((t: any) => t.id === song.id);
-
-    // 3. Play queue starting from index
-    if (index !== -1) {
-      playQueue(tracks, index);
-    }
-  }, [allSongs, playQueue]);
-
-  const handlePlayAll = useCallback(() => {
-    console.log('Play all songs');
-
-    // If currently playing a song from this album, just toggle play/pause
-    if (isCurrentAlbumContext) {
+    // If currently playing this song, just toggle play/pause
+    if (isCurrentSong) {
       togglePlayPause();
       return;
     }
 
-    if (allSongs.length > 0) {
-      const tracks = allSongs.map(mapSongToTrack);
-      playQueue(tracks, 0);
+    // Otherwise, play this song with a queue from sections
+    if (song) {
+      const currentSongTrack = mapSongToTrack(song);
+
+      // Build queue from available sections
+      // Priority: Top Songs By Same Artists > Currently Trending Songs
+      const sectionPriority = ['Top Songs By Same Artists', 'Currently Trending Songs'];
+      let targetSection = null;
+
+      for (const sectionName of sectionPriority) {
+        targetSection = sections.find(
+          (section: any) => section.heading === sectionName
+        );
+        if (targetSection && targetSection.data && targetSection.data.length > 0) {
+          console.log(`🎵 Found "${sectionName}" section with ${targetSection.data.length} songs`);
+          break;
+        }
+      }
+
+      if (targetSection && targetSection.data && targetSection.data.length > 0) {
+        const sectionTracks = targetSection.data
+          .filter((s: any) => s.id !== song.id)
+          .slice(0, 15) // Limit initial queue, auto-queue will add more
+          .map(mapSongToTrack);
+
+        const queueTracks = [currentSongTrack, ...sectionTracks];
+        console.log(`🎵 Playing with ${queueTracks.length} tracks from "${targetSection.heading}"`);
+        playQueue(queueTracks, 0);
+      } else {
+        // No sections available, play single track - auto-queue will add more
+        console.log('🎵 No sections available, playing single track - auto-queue will handle recommendations');
+        playQueue([currentSongTrack], 0);
+      }
     }
-  }, [allSongs, playQueue, isCurrentAlbumContext, togglePlayPause]);
+  }, [song, playQueue, isCurrentSong, togglePlayPause, sections]);
 
   const handleBack = useCallback(() => {
     stateNavigator.navigateBack(1);
   }, [stateNavigator]);
 
   // ============================================================================
-  // UNIFIED DATA SOURCE
-  // ============================================================================
-
-  type ListItem = { type: 'song'; data: Song; id: string };
-
-  const listData = useMemo(() => {
-    return allSongs.map((song: Song) => ({
-      type: 'song' as const,
-      data: song,
-      id: song.id,
-    }));
-  }, [allSongs]);
-
-  // ============================================================================
   // RENDER FUNCTIONS
   // ============================================================================
-
-  const renderItem = useCallback(
-    ({ item, index }: { item: ListItem; index: number }) => {
-      if (item.type === 'song') {
-        const isCurrent = currentTrack?.id === item.id;
-        return (
-          <SongListItem
-            song={item.data}
-            index={index}
-            isPlaying={isCurrent}
-            isActive={isPlaying}
-            onPress={() => handlePlaySong(item.data)}
-          />
-        );
-      }
-      return null;
-    },
-    [handlePlaySong, currentTrack?.id, isPlaying]
-  );
-
-  const keyExtractor = useCallback((item: ListItem) => item.id, []);
 
   // Memoized header
   const listHeader = useMemo(
     () => (
-      <AlbumHeader
-        album={album}
+      <SongHeader
+        song={song}
         imageUrl={imageUrl}
         artworkAnimatedStyle={artworkAnimatedStyle}
         colors={colors}
         styles={styles}
-        handlePlayAll={handlePlayAll}
-        isLiked={isAlbumLiked}
+        handlePlay={handlePlay}
+        isLiked={isSongLiked}
         toggleLike={toggleFavorite}
-        shuffleMode={shuffleMode}
-        toggleShuffle={toggleShuffle}
         isPlaying={isPlaying}
-        isCurrentAlbumContext={isCurrentAlbumContext}
+        isCurrentSong={isCurrentSong}
       />
     ),
-    [album, imageUrl, artworkAnimatedStyle, colors, styles, handlePlayAll, isAlbumLiked, toggleFavorite, shuffleMode, toggleShuffle, isPlaying, isCurrentAlbumContext]
+    [song, imageUrl, artworkAnimatedStyle, colors, styles, handlePlay, isSongLiked, toggleFavorite, isPlaying, isCurrentSong]
   );
 
-  // Memoized footer
+  // Memoized footer with sections
   const listFooter = useMemo(() => {
-    if (!sections || sections.length === 0) return null;
+    if (!sections || sections.length === 0) {
+      return (
+        <View style={styles.emptyState}>
+          <Text variant="body" color="secondary" center>
+            No recommendations available
+          </Text>
+        </View>
+      );
+    }
     return (
       <View style={{ paddingBottom: s.mScale(spacing.lg) }}>
         {sections.map((section: any, index: number) => (
@@ -584,7 +547,9 @@ export const AlbumScreen: React.FC = () => {
   }, [sections, styles, s]);
 
   // ============================================================================
-  // LOADING &  /* Restore insets */
+  // LOADING & ERROR STATES
+  // ============================================================================
+
   const insets = useSafeAreaInsets();
 
   if (isLoading) {
@@ -597,12 +562,12 @@ export const AlbumScreen: React.FC = () => {
     );
   }
 
-  if (error || !albumData?.data) {
+  if (error || !songData?.data) {
     return (
       <SafeView style={styles.container} applyTopInset={false}>
         <View style={styles.loader}>
           <Text variant="body" center color="secondary">
-            Failed to load album
+            Failed to load song
           </Text>
         </View>
       </SafeView>
@@ -657,7 +622,7 @@ export const AlbumScreen: React.FC = () => {
         {/* 3. Title (Fades In) */}
         <Animated.View style={[{ flex: 1 }, headerTitleAnimatedStyle]}>
           <Text variant="body" style={{ fontWeight: '600', textAlign: 'center' }} numberOfLines={1}>
-            {decodeHtmlEntities(album?.title || '')}
+            {decodeHtmlEntities(song?.title || '')}
           </Text>
         </Animated.View>
 
@@ -680,19 +645,17 @@ export const AlbumScreen: React.FC = () => {
         </Pressable>
       </Animated.View>
 
-      {/* Optimized List */}
+      {/* Scrollable Content */}
       <AnimatedLegendList
-        data={listData}
-        extraData={currentTrack?.id}
-        renderItem={renderItem}
-        keyExtractor={keyExtractor}
+        data={[]} // No list items, just header and footer
+        renderItem={() => null}
         onScroll={scrollHandler}
         estimatedItemSize={s.mScale(60)}
         drawDistance={s.vScale(1000)}
         scrollEventThrottle={32}
         ListHeaderComponent={listHeader}
         ListFooterComponent={listFooter}
-        recycleItems={true}
+        recycleItems={false}
         contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
       />
@@ -700,4 +663,4 @@ export const AlbumScreen: React.FC = () => {
   );
 };
 
-export default AlbumScreen;
+export default SongScreen;

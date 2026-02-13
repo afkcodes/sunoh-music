@@ -20,7 +20,9 @@ import LogoAnimation from '../components/common/Loader';
 import {
   ArrowLeft,
   Heart,
+  HeartFill,
   MenuDots,
+  Pause,
   Play,
   Share,
   Shuffle,
@@ -28,12 +30,12 @@ import {
 import { Text } from '../components/common/Text';
 import { HomeSection } from '../components/home/HomeSection';
 import { usePlaylistData } from '../hooks/usePlaylistData';
-import { usePlayerStore } from '../store/usePlayerStore';
+import { useLibraryStore } from '../store/useLibraryStore';
+import { usePlayer } from '../store/usePlayerStore';
 import { borderRadius, fontNames, spacing, ThemeColors } from '../theme';
 import { useTheme } from '../theme/ThemeContext';
 import { Song } from '../types/album';
 import { decodeHtmlEntities } from '../utils/htmlDecode';
-import { getMediaItemProps } from '../utils/media';
 import { makeScalingStyles, useScaling, useScalingStyles } from '../utils/style.util';
 import { mapSongToTrack } from '../utils/trackMapping';
 
@@ -191,9 +193,14 @@ const PlaylistHeader = React.memo<{
   artworkAnimatedStyle: any;
   colors: ThemeColors;
   styles: any;
+  showPause: boolean;
+  shuffleMode: boolean;
+  isLiked: boolean;
+  toggleShuffle: () => void;
+  toggleLike: () => void;
   handlePlayAll: () => void;
 }>(
-  ({ playlist, imageUrl, artworkAnimatedStyle, colors, styles, handlePlayAll }) => {
+  ({ playlist, imageUrl, artworkAnimatedStyle, colors, styles, showPause, shuffleMode, isLiked, toggleShuffle, toggleLike, handlePlayAll }) => {
     return (
       <View style={styles.header}>
         {/* Hero Background */}
@@ -229,7 +236,7 @@ const PlaylistHeader = React.memo<{
             <Text variant="h1" center numberOfLines={2} style={{ fontFamily: fontNames.bold }}>
               {decodeHtmlEntities(playlist?.title || '')}
             </Text>
-            <Text variant="body" style={{ textAlign: 'center' }} color="secondary">
+            <Text variant="body" style={{ textAlign: 'center' }} color="secondary" numberOfLines={2}>
               {decodeHtmlEntities(playlist?.subtitle || '')}
             </Text>
             <View style={styles.metaRow}>
@@ -257,11 +264,15 @@ const PlaylistHeader = React.memo<{
 
             {/* Right: Icons + Play Button */}
             <View style={styles.actionIconsRight}>
-              <Pressable onPress={() => console.log('Favorite pressed')} style={styles.iconButton}>
-                <Heart size={24} color={colors.textPrimary} />
+              <Pressable onPress={toggleLike} style={styles.iconButton}>
+                {isLiked ? (
+                  <HeartFill size={24} color={colors.primaryBase} />
+                ) : (
+                  <Heart size={24} color={colors.textPrimary} />
+                )}
               </Pressable>
-              <Pressable onPress={() => console.log('Shuffle pressed')} style={styles.iconButton}>
-                <Shuffle size={24} color={colors.textPrimary} />
+              <Pressable onPress={toggleShuffle} style={styles.iconButton}>
+                <Shuffle size={24} color={shuffleMode ? colors.primaryBase : colors.textPrimary} />
               </Pressable>
               <Pressable onPress={() => console.log('Share pressed')} style={styles.iconButton}>
                 <Share size={24} color={colors.textPrimary} />
@@ -270,7 +281,11 @@ const PlaylistHeader = React.memo<{
                 onPress={handlePlayAll}
                 style={({ pressed }) => [styles.playButton, pressed && { opacity: 0.8 }]}
               >
-                <Play size={32} color="#FFFFFF" />
+                {showPause ? (
+                  <Pause size={40} color="#FFFFFF" />
+                ) : (
+                  <Play size={40} color="#FFFFFF" />
+                )}
               </Pressable>
             </View>
           </View>
@@ -283,7 +298,10 @@ const PlaylistHeader = React.memo<{
     return (
       prevProps.playlist?.id === nextProps.playlist?.id &&
       prevProps.imageUrl === nextProps.imageUrl &&
-      prevProps.colors === nextProps.colors
+      prevProps.colors === nextProps.colors &&
+      prevProps.showPause === nextProps.showPause &&
+      prevProps.shuffleMode === nextProps.shuffleMode &&
+      prevProps.isLiked === nextProps.isLiked
     );
   }
 );
@@ -299,20 +317,29 @@ export const PlaylistScreen: React.FC = () => {
   const styles = useScalingStyles(createStyles, colors);
   const { data, stateNavigator } = useNavigationEvent();
   const playlistId = data.playlistId as string;
+
+
   const provider = (data.provider as any) || 'saavn';
   const { data: playlistData, isLoading, error } = usePlaylistData(playlistId, provider);
+  const { currentTrack, isPlaying, togglePlayPause, toggleShuffle, shuffleMode, playQueue } = usePlayer();
+  const { isLiked: isLibraryLiked, toggleLikePlaylist } = useLibraryStore();
   const s = useScaling();
 
   const finalPlaylist = playlistData?.data?.playlist || playlistData?.data?.album || playlistData?.data;
   const sections = playlistData?.data?.sections || finalPlaylist?.sections || [];
 
+  // Determine if the current playing track belongs to this playlist
+  const isCurrentPlaylistContext = useMemo(() => {
+    if (!currentTrack || !finalPlaylist?.songs) return false;
+    return finalPlaylist.songs.some((s: Song) => s.id === currentTrack.id);
+  }, [currentTrack, finalPlaylist]);
 
-  // Use standardized media props
-  const mediaProps = useMemo(
-    () => (finalPlaylist ? getMediaItemProps(finalPlaylist, provider) : null),
-    [finalPlaylist, provider]
-  );
-  const imageUrl = mediaProps?.imageUrl || '';
+  const showPause = isPlaying && isCurrentPlaylistContext;
+  // Ensure we pass 'playlist' as a valid type now that store is updated
+  const isLiked = finalPlaylist ? isLibraryLiked(finalPlaylist.id, 'playlist') : false;
+
+  const imagery = finalPlaylist?.image || finalPlaylist?.artwork || [];
+  const imageUrl = Array.isArray(imagery) ? imagery[imagery.length - 1]?.link || '' : imagery || '';
 
   // ============================================================================
   // OPTIMIZED SCROLL ANIMATIONS
@@ -412,7 +439,19 @@ export const PlaylistScreen: React.FC = () => {
   // MEMOIZED CALLBACKS
   // ============================================================================
 
-  const { playQueue } = usePlayerStore();
+  const handleToggleLike = useCallback(() => {
+    if (finalPlaylist) {
+      toggleLikePlaylist({
+        id: finalPlaylist.id,
+        type: 'playlist',
+        title: finalPlaylist.title || finalPlaylist.name,
+        image: imageUrl, // Use the resolved image URL
+        subtitle: finalPlaylist.subtitle || 'Playlist',
+        timestamp: Date.now(),
+        provider: provider,
+      });
+    }
+  }, [finalPlaylist, imageUrl, toggleLikePlaylist, provider]);
 
   const handlePlaySong = useCallback((song: Song) => {
     console.log('Play song:', song.title);
@@ -431,13 +470,17 @@ export const PlaylistScreen: React.FC = () => {
   }, [finalPlaylist, playQueue]);
 
   const handlePlayAll = useCallback(() => {
+    if (showPause) {
+      togglePlayPause();
+      return;
+    }
     console.log('Play all songs');
     const allSongs = finalPlaylist?.songs || finalPlaylist?.list || [];
     if (allSongs.length > 0) {
       const tracks = allSongs.map(mapSongToTrack);
       playQueue(tracks, 0);
     }
-  }, [finalPlaylist, playQueue]);
+  }, [finalPlaylist, playQueue, showPause, togglePlayPause]);
 
   const handleBack = useCallback(() => {
     stateNavigator.navigateBack(1);
@@ -464,11 +507,18 @@ export const PlaylistScreen: React.FC = () => {
 
   const renderItem = useCallback(
     ({ item, index }: { item: ListItem; index: number }) => {
+      const isCurrent = currentTrack?.id === item.data.id;
       return (
-        <SongListItem song={item.data} index={index} onPress={() => handlePlaySong(item.data)} />
+        <SongListItem
+          song={item.data}
+          index={index}
+          isPlaying={isCurrent}
+          isActive={isPlaying}
+          onPress={() => handlePlaySong(item.data)}
+        />
       );
     },
-    [handlePlaySong]
+    [handlePlaySong, currentTrack?.id, isPlaying]
   );
 
   const keyExtractor = useCallback((item: ListItem) => item.id, []);
@@ -482,10 +532,27 @@ export const PlaylistScreen: React.FC = () => {
         artworkAnimatedStyle={artworkAnimatedStyle}
         colors={colors}
         styles={styles}
+        showPause={showPause}
+        shuffleMode={shuffleMode}
+        isLiked={isLiked}
+        toggleShuffle={toggleShuffle}
+        toggleLike={handleToggleLike}
         handlePlayAll={handlePlayAll}
       />
     ),
-    [finalPlaylist, imageUrl, artworkAnimatedStyle, colors, styles, handlePlayAll]
+    [
+      finalPlaylist,
+      imageUrl,
+      artworkAnimatedStyle,
+      colors,
+      styles,
+      showPause,
+      shuffleMode,
+      isLiked,
+      toggleShuffle,
+      handleToggleLike,
+      handlePlayAll
+    ]
   );
 
   // Memoized footer
@@ -604,6 +671,7 @@ export const PlaylistScreen: React.FC = () => {
       {/* Optimized List */}
       <AnimatedLegendList
         data={listData}
+        extraData={[currentTrack?.id, isPlaying]}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         onScroll={scrollHandler}
@@ -614,7 +682,10 @@ export const PlaylistScreen: React.FC = () => {
         ListFooterComponent={listFooter}
         recycleItems={true}
         contentContainerStyle={{ paddingBottom: 100 }}
+        showsVerticalScrollIndicator={false}
       />
     </SafeView>
   );
 };
+
+export default PlaylistScreen;

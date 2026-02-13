@@ -1,6 +1,7 @@
 import { AudioPro, AudioProRepeatMode, AudioProState, AudioProTrack, useAudioPro } from 'react-native-audio-pro';
 import { create } from 'zustand';
 import { audioService } from '../services/audio/AudioService';
+import { mmkv } from './storage';
 
 // ---------------------------------------------------------------------------
 // App-only state – things the library doesn't track for us.
@@ -14,6 +15,7 @@ interface PlayerAppState {
   shuffleMode: boolean;
   isInitialized: boolean;
   queue: AudioProTrack[];
+  optimisticCurrentTrack: AudioProTrack | null;
 
   // Actions
   play: (track?: AudioProTrack) => void;
@@ -30,10 +32,44 @@ interface PlayerAppState {
 
   setRepeatMode: (mode: AudioProRepeatMode) => void;
   setShuffleMode: (enabled: boolean) => void;
+  toggleShuffle: () => void;
 
   syncQueue: () => void;
+  playNext: (track: AudioProTrack) => void;
+  addToQueue: (track: AudioProTrack) => void;
   setInitialized: (initialized: boolean) => void;
+  setOptimisticCurrentTrack: (track: AudioProTrack | null) => void;
 }
+
+// ---------------------------------------------------------------------------
+// Direct MMKV Read for Synchronous Hydraion
+// (Avoids circular dependency or initialization timing issues with AudioService)
+// ---------------------------------------------------------------------------
+const STORAGE_KEYS = {
+  QUEUE: 'audio_queue',
+  CURRENT_INDEX: 'audio_current_index',
+  POSITION: 'audio_position',
+};
+
+const getPersistedState = () => {
+  try {
+    const queueJson = mmkv.getString(STORAGE_KEYS.QUEUE);
+    if (!queueJson) return null;
+
+    const queue = JSON.parse(queueJson) as AudioProTrack[];
+    const index = mmkv.getNumber(STORAGE_KEYS.CURRENT_INDEX) || 0;
+    return { queue, index };
+  } catch (e) {
+    console.warn('Failed to hydrate player store:', e);
+    return null;
+  }
+};
+
+const persisted = getPersistedState();
+const initialQueue = persisted?.queue || [];
+const initialIndex = persisted?.index || 0;
+// Only set optimistic track if we have a queue. 
+const initialTrack = initialQueue.length > 0 && initialQueue[initialIndex] ? initialQueue[initialIndex] : null;
 
 export const usePlayerStore = create<PlayerAppState>((set, get) => {
 
@@ -48,7 +84,8 @@ export const usePlayerStore = create<PlayerAppState>((set, get) => {
 
   return {
     minimized: true,
-    queue: [],
+    queue: initialQueue,
+    optimisticCurrentTrack: initialTrack,
     repeatMode: AudioProRepeatMode.OFF,
     shuffleMode: false,
     isInitialized: false,
@@ -101,6 +138,13 @@ export const usePlayerStore = create<PlayerAppState>((set, get) => {
       set({ shuffleMode: enabled });
     },
 
+    toggleShuffle: () => {
+      const { shuffleMode } = get();
+      const newMode = !shuffleMode;
+      audioService.setShuffleModeEnabled(newMode);
+      set({ shuffleMode: newMode });
+    },
+
     syncQueue: async () => {
       try {
         const queue = await audioService.getMediaItems();
@@ -115,6 +159,18 @@ export const usePlayerStore = create<PlayerAppState>((set, get) => {
       if (initialized) {
         get().syncQueue();
       }
+    },
+
+    setOptimisticCurrentTrack: (track) => set({ optimisticCurrentTrack: track }),
+
+    playNext: (track) => {
+      audioService.playNext(track);
+      get().syncQueue();
+    },
+
+    addToQueue: (track) => {
+      audioService.addToQueue(track);
+      get().syncQueue();
     },
   };
 });
@@ -132,8 +188,17 @@ export function usePlayer() {
   const appState = usePlayerStore();
   // Select primitives / stable refs individually – avoids creating a new
   // object each render which would break useSyncExternalStore's cache.
-  const currentTrack = useAudioPro(selectTrack);
+  const realCurrentTrack = useAudioPro(selectTrack);
   const playerState = useAudioPro(selectState);
+
+  // Use the native track if available, otherwise fall back to the optimistic track
+  // (This ensures the UI shows something immediately on launch)
+  const currentTrack = realCurrentTrack || appState.optimisticCurrentTrack;
+
+  // Once we have a real track from native, we can clear the optimistic one
+  // to save memory/confusion, although keeping it doesn't hurt as `realCurrentTrack` takes precedence.
+  // Using `useEffect` here might cause a re-render loop if we are not careful,
+  // so we'll just rely on the fallback logic.
 
   return {
     ...appState,

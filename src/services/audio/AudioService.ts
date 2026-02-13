@@ -1,5 +1,7 @@
+import { AppState, AppStateStatus } from 'react-native';
 import { AudioPro, AudioProEvent, AudioProEventType, AudioProRepeatMode, AudioProTrack } from 'react-native-audio-pro';
 import { mmkv } from '../../store/storage';
+import { debugLogger } from '../../utils/debugLogger';
 
 const STORAGE_KEYS = {
   QUEUE: 'audio_queue',
@@ -24,7 +26,7 @@ class AudioService {
   private static instance: AudioService;
   private listenerAdded = false;
 
-  private constructor() {}
+  private constructor() { }
 
   static getInstance(): AudioService {
     if (!AudioService.instance) {
@@ -41,9 +43,28 @@ class AudioService {
     if (this.listenerAdded) return;
     this.listenerAdded = true;
     AudioPro.addEventListener(this.handleAudioEvent);
+    AppState.addEventListener('change', this.handleAppStateChange);
+    debugLogger.log('SYSTEM', 'Persistence started');
   }
 
+  private handleAppStateChange = (nextAppState: AppStateStatus) => {
+    debugLogger.log('APP_STATE', nextAppState);
+  };
+
   private handleAudioEvent = (event: AudioProEvent) => {
+    // Basic event info
+    const logData: any = { type: event.type };
+
+    // Add specific payload data we care about
+    if (event.payload) {
+      if (event.payload.position !== undefined) logData.position = event.payload.position;
+      if (event.payload.state !== undefined) logData.state = event.payload.state;
+      if (event.payload.index !== undefined) logData.index = event.payload.index;
+      if (event.payload.speed !== undefined) logData.speed = event.payload.speed;
+    }
+
+    debugLogger.log('AUDIO_EVENT', logData);
+
     switch (event.type) {
       case AudioProEventType.TRACK_CHANGED:
         this.persistCurrentIndex();
@@ -114,7 +135,7 @@ class AudioService {
 
   play(track?: AudioProTrack) {
     if (track) {
-      AudioPro.addMediaItems(track);
+      AudioPro.addMediaItems([track]);
       AudioPro.getMediaItems().then((q) => {
         const targetIndex = q.length - 1;
         if (targetIndex >= 0) {
@@ -135,6 +156,19 @@ class AudioService {
       AudioPro.seekToMediaItem(startIndex);
     }
     AudioPro.play();
+    this.persistQueue();
+  }
+
+
+  playNext(track: AudioProTrack) {
+    const currentIndex = AudioPro.getCurrentMediaItemIndex();
+    // Insert after current index. If -1, inserts at 0.
+    AudioPro.addMediaItemsAt(currentIndex + 1, [track]);
+    this.persistQueue();
+  }
+
+  addToQueue(track: AudioProTrack) {
+    AudioPro.addMediaItems([track]);
     this.persistQueue();
   }
 

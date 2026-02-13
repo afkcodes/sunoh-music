@@ -22,18 +22,42 @@ export function getMediaItemProps(
   item: any,
   sectionProvider?: string
 ): MediaItemProps {
+  if (!item) {
+    return {
+      id: '',
+      token: '',
+      title: '',
+      subtitle: '',
+      imageUrl: '',
+      type: 'album',
+      provider: (sectionProvider || 'saavn') as any,
+      isCircle: false,
+    };
+  }
   const itemType = (item.type || 'album') as SaavnItem['type'];
   const isConfigType = (key: string): key is keyof typeof dataConfigs => key in dataConfigs;
   const config = isConfigType(itemType) ? dataConfigs[itemType] : dataConfigs.album;
 
   const title = decodeHtmlEntities(dataExtractor<string>(item as unknown as NestedObject, config.title) || '');
-  
-  const subtitleRaw = dataExtractor<string>(item as unknown as NestedObject, config.subtitle) || '';
-  const subtitle = decodeHtmlEntities(capitalizeFirstLetter(subtitleRaw));
+
+  const subtitleRaw = dataExtractor<any>(item as unknown as NestedObject, config.subtitle) || '';
+
+  let subtitle = '';
+  if (Array.isArray(subtitleRaw)) {
+    // If it's an array of objects (like artists), join their names
+    subtitle = subtitleRaw
+      .map((s: any) => (typeof s === 'object' ? s.name : s))
+      .filter(Boolean)
+      .join(', ');
+  } else {
+    subtitle = String(subtitleRaw);
+  }
+
+  subtitle = decodeHtmlEntities(capitalizeFirstLetter(subtitle));
 
   // Standardized Image Extraction
   const imageUrl = dataExtractor<string>(
-    item as unknown as NestedObject, 
+    item as unknown as NestedObject,
     config.image,
     '.',
     (images: any[]) => {

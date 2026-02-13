@@ -17,10 +17,12 @@ export const rootNavigator = new StateNavigator([
 export const homeNavigator = new StateNavigator([
   { key: Routes.Home },
   { key: Routes.Album, trackCrumbTrail: true },
+  { key: Routes.Song, trackCrumbTrail: true },
   { key: Routes.SectionDetail, trackCrumbTrail: true },
   { key: Routes.Details, trackCrumbTrail: true },
   { key: Routes.Playlist, trackCrumbTrail: true },
   { key: Routes.Settings, trackCrumbTrail: true },
+  { key: Routes.DebugLogs, trackCrumbTrail: true },
 ]);
 
 /**
@@ -29,6 +31,9 @@ export const homeNavigator = new StateNavigator([
 export const libraryNavigator = new StateNavigator([
   { key: Routes.Library },
   { key: Routes.Playlist, trackCrumbTrail: true },
+  { key: Routes.Album, trackCrumbTrail: true },
+  { key: Routes.Song, trackCrumbTrail: true },
+  { key: Routes.LikedSongs, trackCrumbTrail: true },
 ]);
 
 /**
@@ -38,6 +43,7 @@ export const searchNavigator = new StateNavigator([
   { key: Routes.Search },
   { key: Routes.Playlist, trackCrumbTrail: true },
   { key: Routes.Album, trackCrumbTrail: true },
+  { key: Routes.Song, trackCrumbTrail: true },
   { key: Routes.SectionDetail, trackCrumbTrail: true },
   { key: Routes.Details, trackCrumbTrail: true },
 ]);

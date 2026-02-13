@@ -10,7 +10,7 @@ import { usePlayer } from '../../store/usePlayerStore';
 import { useTheme } from '../../theme/ThemeContext';
 import { AppTheme } from '../../theme/types';
 import { makeScalingStyles, useScalingStyles } from '../../utils/style.util';
-import { Pause, Play, SkipNext } from '../common/SolarIcons.generated';
+import { Pause, Play, SkipNext, SkipPrevious } from '../common/SolarIcons.generated';
 import { Text } from '../common/Text';
 
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
@@ -21,6 +21,8 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
     width: '100%',
     backgroundColor: theme.colors.bgSurface,
     overflow: 'hidden',
+    zIndex: 100,
+    elevation: 10,
   },
   gradientContainer: {
     position: 'relative',
@@ -50,7 +52,7 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: s.mScale(20),
+    gap: s.mScale(16),
   },
   playButton: {
     width: s.mScale(44),
@@ -73,7 +75,7 @@ export const MiniPlayer = memo(({ onPress }: { onPress?: () => void }) => {
   const { colors, scale: s } = useTheme();
   const theme = { colors, scale: s } as AppTheme;
   const styles = useScalingStyles(createStyles, theme);
-  const { currentTrack, isPlaying, togglePlayPause, next } = usePlayer();
+  const { currentTrack, isPlaying, togglePlayPause, next, previous } = usePlayer();
   const insets = useSafeAreaInsets();
   const { playerTheme, gradientColors } = useArtworkTheme(currentTrack?.artwork);
   const { position, duration } = useTrackProgress();
@@ -98,6 +100,11 @@ export const MiniPlayer = memo(({ onPress }: { onPress?: () => void }) => {
     e.stopPropagation();
     next();
   }, [next]);
+
+  const handlePrevious = useCallback((e: { stopPropagation: () => void }) => {
+    e.stopPropagation();
+    previous();
+  }, [previous]);
 
   const titleStyle = useMemo(
     () => [styles.title, { color: playerTheme?.onSurface ?? colors.textPrimary }],
@@ -136,7 +143,10 @@ export const MiniPlayer = memo(({ onPress }: { onPress?: () => void }) => {
   if (!currentTrack) return null;
   return (
     <View style={[styles.container, { bottom: miniPlayerBottomOffset }]}>
-      <Pressable onPress={onPress}>
+      <Pressable onPress={() => {
+        console.log('[MiniPlayer] Pressed');
+        onPress?.();
+      }}>
         <View style={styles.gradientContainer}>
           {/* Base gradient background with content */}
           <LinearGradient
@@ -161,6 +171,10 @@ export const MiniPlayer = memo(({ onPress }: { onPress?: () => void }) => {
             </View>
 
             <View style={styles.controls}>
+              <Pressable onPress={handlePrevious}>
+                <SkipPrevious size={28} color={playerTheme?.onSurface ?? colors.textPrimary} />
+              </Pressable>
+
               <Pressable style={playBtnStyle} onPress={handlePlayPause}>
                 {isPlaying ? (
                   <Pause size={28} color={playerTheme?.onPrimaryContainer ?? colors.textPrimary} />

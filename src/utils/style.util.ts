@@ -9,6 +9,7 @@
  * ✅ Accessibility (respects user font size settings)
  * ✅ Performance (proper memoization, no unnecessary re-renders)
  * ✅ Type safety (full TypeScript support)
+ * ✅ Display size variations (Small/Default/Large system settings)
  *
  * This is a COMPLETE implementation - copy this entire file to your project.
  *
@@ -21,13 +22,13 @@
 
 import { useCallback, useMemo } from 'react';
 import {
-    Dimensions,
-    type ImageStyle,
-    PixelRatio,
-    Platform,
-    type TextStyle,
-    useWindowDimensions,
-    type ViewStyle,
+  Dimensions,
+  type ImageStyle,
+  PixelRatio,
+  Platform,
+  type TextStyle,
+  useWindowDimensions,
+  type ViewStyle,
 } from 'react-native';
 
 // ============================================================================
@@ -62,6 +63,40 @@ const MIN_TOUCH_TARGET = Platform.select({
  */
 const MAX_FONT_SCALE_FOR_LAYOUT = 2.0;
 
+/**
+ * Display size detection thresholds.
+ * When device width exceeds these values, we assume "Small" or "Smallest" display size is set.
+ * 
+ * Typical phone widths:
+ * - Default display size: 360-430dp
+ * - Small display size: 430-500dp
+ * - Smallest display size: 500-550dp
+ */
+const DISPLAY_SIZE_THRESHOLDS = {
+  // If width > NORMAL_MAX, user has "Small" display size enabled
+  NORMAL_MAX: 430,
+  // If width > SMALL_MAX, user has "Smallest" display size enabled
+  SMALL_MAX: 500,
+};
+
+/**
+ * Maximum scale factors to prevent UI from becoming too large
+ * when users have "Small" or "Smallest" display size settings.
+ * 
+ * These caps ensure:
+ * - UI elements don't become comically large
+ * - Cards/buttons remain proportional
+ * - Layouts don't break on wide-mode devices
+ */
+const MAX_SCALE_FACTORS = {
+  // For scale() function - affects widths, icon sizes
+  SCALE: 1.15, // Max 15% larger than design width
+  // For mScale() function - affects padding, margins, border radius
+  MSCALE: 1.10, // Max 10% larger than design width (more conservative)
+  // For square() function - affects avatars, square elements
+  SQUARE: 1.12, // Max 12% larger than design width
+};
+
 // ============================================================================
 // PART 2: SCALING HOOK (Handles orientation changes automatically)
 // ============================================================================
@@ -89,6 +124,8 @@ export interface ScalingFunctions {
     scaleX: number;
     scaleY: number;
     pixelRatio: number;
+    displaySizeMode: 'default' | 'small' | 'smallest';
+    effectiveScaleX: number; // Capped scale factor actually used
   };
 }
 
@@ -119,62 +156,90 @@ export const useScaling = (): ScalingFunctions => {
 
   return useMemo(() => {
     const isLandscape = width > height;
+    const smallerDimension = Math.min(width, height);
 
-    // Core scaling functions
+    // Detect display size mode
+    let displaySizeMode: 'default' | 'small' | 'smallest' = 'default';
+    if (smallerDimension > DISPLAY_SIZE_THRESHOLDS.SMALL_MAX) {
+      displaySizeMode = 'smallest';
+    } else if (smallerDimension > DISPLAY_SIZE_THRESHOLDS.NORMAL_MAX) {
+      displaySizeMode = 'small';
+    }
+
+    // Calculate raw scale factor
+    const rawScaleX = width / DESIGN_WIDTH;
+    const rawScaleY = height / DESIGN_HEIGHT;
+
+    // Core scaling functions with capping for non-default display sizes
     const scale = (size: number): number => {
-      return (width / DESIGN_WIDTH) * size;
+      const cappedScaleX = Math.min(rawScaleX, DESIGN_WIDTH * MAX_SCALE_FACTORS.SCALE / DESIGN_WIDTH + (rawScaleX - DESIGN_WIDTH / DESIGN_WIDTH));
+      const effectiveScale = displaySizeMode === 'default' ? rawScaleX : Math.min(rawScaleX, 1 + MAX_SCALE_FACTORS.SCALE - 1);
+      return PixelRatio.roundToNearestPixel(effectiveScale * size);
     };
 
     const vScale = (size: number): number => {
-      return (height / DESIGN_HEIGHT) * size;
+      // vScale rarely affected by display size since it's height-based
+      return PixelRatio.roundToNearestPixel(rawScaleY * size);
     };
 
     const mScale = (size: number, factor: number = 0.5): number => {
-      return size + (scale(size) - size) * factor;
+      const effectiveScale = displaySizeMode === 'default' ? rawScaleX : Math.min(rawScaleX, 1 + MAX_SCALE_FACTORS.MSCALE - 1);
+      const scaled = size + (effectiveScale * size - size) * factor;
+      return PixelRatio.roundToNearestPixel(scaled);
     };
 
     const font = (size: number): number => {
-      const scaled = scale(size);
+      // Font sizes should ALWAYS respect user's font scale (accessibility)
+      // But we cap the base scaling to prevent extreme size growth
+      const effectiveScale = displaySizeMode === 'default' ? rawScaleX : Math.min(rawScaleX, 1 + MAX_SCALE_FACTORS.SCALE - 1);
+      const scaled = effectiveScale * size;
       return PixelRatio.roundToNearestPixel(scaled * fontScale);
     };
 
     const touchable = (size: number, minSize: number = MIN_TOUCH_TARGET): number => {
-      return Math.max(scale(size), minSize);
+      const effectiveScale = displaySizeMode === 'default' ? rawScaleX : Math.min(rawScaleX, 1 + MAX_SCALE_FACTORS.SCALE - 1);
+      return PixelRatio.roundToNearestPixel(Math.max(effectiveScale * size, minSize));
     };
 
     const textSpacing = (size: number): number => {
-      const scaled = scale(size);
+      const effectiveScale = displaySizeMode === 'default' ? rawScaleX : Math.min(rawScaleX, 1 + MAX_SCALE_FACTORS.MSCALE - 1);
+      const scaled = effectiveScale * size;
       const clampedFontScale = Math.min(fontScale, MAX_FONT_SCALE_FOR_LAYOUT);
-      return scaled * clampedFontScale;
+      return PixelRatio.roundToNearestPixel(scaled * clampedFontScale);
     };
 
     const square = (size: number): number => {
-      const smallerDimension = Math.min(width, height);
       const baseSmaller = Math.min(DESIGN_WIDTH, DESIGN_HEIGHT);
-      return (smallerDimension / baseSmaller) * size;
+      const rawScale = smallerDimension / baseSmaller;
+      const effectiveScale = displaySizeMode === 'default' ? rawScale : Math.min(rawScale, 1 + MAX_SCALE_FACTORS.SQUARE - 1);
+      return PixelRatio.roundToNearestPixel(effectiveScale * size);
     };
 
     const wp = (percentage: number): number => {
-      return (percentage / 100) * width;
+      return PixelRatio.roundToNearestPixel((percentage / 100) * width);
     };
 
     const hp = (percentage: number): number => {
-      return (percentage / 100) * height;
+      return PixelRatio.roundToNearestPixel((percentage / 100) * height);
     };
+
+    const effectiveScaleX = displaySizeMode === 'default' ? rawScaleX : Math.min(rawScaleX, 1 + MAX_SCALE_FACTORS.SCALE - 1);
 
     const device = {
       width,
       height,
       isLandscape,
-      isSmallPhone: Math.min(width, height) < 375,
-      isPhone: Math.min(width, height) < 768,
-      isTablet: Math.min(width, height) >= 768,
+      isSmallPhone: smallerDimension < 375,
+      isPhone: smallerDimension < 768,
+      isTablet: smallerDimension >= 768,
       fontScale,
       isLargeFontScale: fontScale > 1.3,
       isExtraLargeFontScale: fontScale > 1.6,
-      scaleX: width / DESIGN_WIDTH,
-      scaleY: height / DESIGN_HEIGHT,
+      scaleX: rawScaleX,
+      scaleY: rawScaleY,
       pixelRatio: PixelRatio.get(),
+      displaySizeMode,
+      effectiveScaleX,
     } as const;
 
     return {
@@ -293,7 +358,7 @@ export function useDynamicStyles<
   T extends Record<string, StyleProp>,
   P extends Record<string, any>,
   Theme = any
-  // biome-ignore lint/suspicious/noExplicitAny: Theme system uses dynamic types
+// biome-ignore lint/suspicious/noExplicitAny: Theme system uses dynamic types
 >(styleFactory: (s: ScalingFunctions, theme: Theme, props: P) => T, theme: Theme, props: P): T {
   const s = useScaling();
 
@@ -386,10 +451,8 @@ export function makeScalingStylesOnly<T extends Record<string, StyleProp>>(
   return factory;
 }
 
-// useDesignTokens has been moved to ../theme/useDesignTokens.ts
-
 // ============================================================================
-// PART 7: STATIC UTILITIES (Use with extreme caution!)
+// PART 6: STATIC UTILITIES (Use with extreme caution!)
 // ============================================================================
 
 /**
@@ -413,11 +476,11 @@ export const staticScaling = (() => {
   const fontScale = PixelRatio.getFontScale();
 
   return {
-    scale: (size: number) => (width / DESIGN_WIDTH) * size,
-    vScale: (size: number) => (height / DESIGN_HEIGHT) * size,
+    scale: (size: number) => PixelRatio.roundToNearestPixel((width / DESIGN_WIDTH) * size),
+    vScale: (size: number) => PixelRatio.roundToNearestPixel((height / DESIGN_HEIGHT) * size),
     mScale: (size: number, factor = 0.5) => {
       const scale = (width / DESIGN_WIDTH) * size;
-      return size + (scale - size) * factor;
+      return PixelRatio.roundToNearestPixel(size + (scale - size) * factor);
     },
     font: (size: number) => {
       const scaled = (width / DESIGN_WIDTH) * size;
@@ -434,150 +497,71 @@ export const staticScaling = (() => {
 })();
 
 // ============================================================================
-// PART 8: COMPLETE USAGE EXAMPLES
+// PART 7: DISPLAY SIZE CONFIGURATION
 // ============================================================================
 
 /**
- * EXAMPLE 1: Basic Component
- *
+ * Configure display size thresholds and scale caps.
+ * Call this at app initialization if you want different values.
+ * 
+ * @example
  * ```tsx
- * // UserCard.styles.ts
- * import { makeScalingStyles, type ScalingFunctions } from './scaling';
- *
- * export const createUserCardStyles = makeScalingStyles((s, theme) => ({
- *   container: {
- *     width: s.scale(300),
- *     padding: s.mScale(16),
- *     backgroundColor: theme.colors.card,
- *     borderRadius: s.mScale(12),
- *   },
- *   avatar: {
- *     width: s.square(60),
- *     height: s.square(60),
- *     borderRadius: s.square(30),
- *   },
- *   name: {
- *     fontSize: s.font(18),
- *     fontWeight: '600',
- *     color: theme.colors.text,
- *   },
- * }));
- *
- * // UserCard.tsx
- * import { useScalingStyles } from './scaling';
- * import { createUserCardStyles } from './UserCard.styles';
- * import { useTheme } from './theme';
- *
- * export const UserCard = ({ user }) => {
- *   const theme = useTheme();
- *   const styles = useScalingStyles(createUserCardStyles, theme);
- *
- *   return (
- *     <View style={styles.container}>
- *       <Image style={styles.avatar} source={{ uri: user.avatar }} />
- *       <Text style={styles.name}>{user.name}</Text>
- *     </View>
- *   );
- * };
- * ```
- */
-
-/**
- * EXAMPLE 2: Button with Variants
- *
- * ```tsx
- * import { makeScalingStyles, useScalingStyles } from './scaling';
- *
- * const createButtonStyles = makeScalingStyles((s, theme) => ({
- *   base: {
- *     paddingHorizontal: s.mScale(16),
- *     paddingVertical: s.mScale(12),
- *     borderRadius: s.mScale(8),
- *     minHeight: s.touchable(44),
- *   },
- *   primary: {
- *     backgroundColor: theme.colors.primary,
- *   },
- *   secondary: {
- *     backgroundColor: theme.colors.secondary,
- *   },
- *   text: {
- *     fontSize: s.font(16),
- *     fontWeight: '600',
- *     color: theme.colors.white,
- *   },
- * }));
- *
- * export const Button = ({ variant = 'primary', children }) => {
- *   const theme = useTheme();
- *   const styles = useScalingStyles(createButtonStyles, theme);
- *
- *   // ✅ Use array syntax - native RN optimization
- *   return (
- *     <Pressable style={[styles.base, styles[variant]]}>
- *       <Text style={styles.text}>{children}</Text>
- *     </Pressable>
- *   );
- * };
- * ```
- */
-
-/**
- * EXAMPLE 3: Props-Dependent Styles
- *
- * ```tsx
- * import { useDynamicStyles } from './scaling';
- *
- * interface CardProps {
- *   size: 'small' | 'large';
- *   isActive: boolean;
- * }
- *
- * const createCardStyles = (s, theme, { size, isActive }: CardProps) => ({
- *   container: {
- *     width: s.scale(size === 'small' ? 150 : 250),
- *     backgroundColor: isActive ? theme.colors.active : theme.colors.card,
- *     borderWidth: isActive ? 2 : 1,
- *   },
+ * // In your App.tsx or index.tsx
+ * import { configureDisplaySizeHandling } from './utils/scaling';
+ * 
+ * configureDisplaySizeHandling({
+ *   normalMax: 430,
+ *   smallMax: 500,
+ *   maxScaleFactor: 1.15,
+ *   maxMScaleFactor: 1.10,
  * });
- *
- * export const Card = (props: CardProps) => {
- *   const theme = useTheme();
- *   const styles = useDynamicStyles(createCardStyles, theme, props);
- *   return <View style={styles.container}>...</View>;
- * };
  * ```
  */
-
-/**
- * EXAMPLE 4: Responsive Layout
- *
- * ```tsx
- * import { useScaling, useScalingStylesOnly } from './scaling';
- *
- * const createGridStyles = (s) => ({
- *   container: {
- *     flexDirection: s.device.isTablet ? 'row' : 'column',
- *     padding: s.device.isSmallPhone ? s.mScale(8) : s.mScale(16),
- *   },
- *   item: {
- *     width: s.device.isTablet ? s.scale(200) : '100%',
- *     margin: s.mScale(8),
- *   },
- * });
- *
- * export const ProductGrid = () => {
- *   const styles = useScalingStylesOnly(createGridStyles);
- *   return <View style={styles.container}>...</View>;
- * };
- * ```
- */
+export function configureDisplaySizeHandling(config: {
+  normalMax?: number;
+  smallMax?: number;
+  maxScaleFactor?: number;
+  maxMScaleFactor?: number;
+  maxSquareFactor?: number;
+}) {
+  if (config.normalMax !== undefined) {
+    (DISPLAY_SIZE_THRESHOLDS as any).NORMAL_MAX = config.normalMax;
+  }
+  if (config.smallMax !== undefined) {
+    (DISPLAY_SIZE_THRESHOLDS as any).SMALL_MAX = config.smallMax;
+  }
+  if (config.maxScaleFactor !== undefined) {
+    (MAX_SCALE_FACTORS as any).SCALE = config.maxScaleFactor;
+  }
+  if (config.maxMScaleFactor !== undefined) {
+    (MAX_SCALE_FACTORS as any).MSCALE = config.maxMScaleFactor;
+  }
+  if (config.maxSquareFactor !== undefined) {
+    (MAX_SCALE_FACTORS as any).SQUARE = config.maxSquareFactor;
+  }
+}
 
 // ============================================================================
-// PART 9: QUICK REFERENCE GUIDE
+// PART 8: QUICK REFERENCE GUIDE
 // ============================================================================
 
 /**
+ * WHAT'S NEW IN THIS VERSION:
+ * 
+ * ✅ Automatic detection of "Small" and "Smallest" display size settings
+ * ✅ Intelligent capping of scale factors to prevent oversized UI
+ * ✅ New device.displaySizeMode property ('default' | 'small' | 'smallest')
+ * ✅ New device.effectiveScaleX property (shows capped scale factor)
+ * ✅ Configurable thresholds via configureDisplaySizeHandling()
+ * 
+ * DISPLAY SIZE HANDLING:
+ * 
+ * - Default (360-430dp): Normal scaling, no caps applied
+ * - Small (430-500dp): Scale capped at 15% above design width
+ * - Smallest (>500dp): Scale capped at 15% above design width
+ * 
+ * This ensures UI looks good regardless of user's display size preference!
+ * 
  * WHEN TO USE WHAT:
  *
  * scale(n)       → Widths, horizontal spacing, icon sizes
@@ -596,7 +580,6 @@ export const staticScaling = (() => {
  * useScalingStylesOnly(factory)        → Without theme (simpler)
  * useDynamicStyles(factory, theme, props) → Styles depend on props
  * useInlineStyles(factory)             → Simple cases only
- * useDesignTokens()                    → Pre-scaled design system tokens
  *
  * PERFORMANCE RULES:
  *
@@ -611,28 +594,4 @@ export const staticScaling = (() => {
  * - Use vScale() for scrollable content
  * - Export staticScaling values for UI
  * - Clamp font sizes (breaks accessibility)
- */
-
-/**
- * TESTING YOUR STYLES:
- *
- * ```tsx
- * import { createButtonStyles } from './Button.styles';
- *
- * describe('Button styles', () => {
- *   it('scales correctly', () => {
- *     const mockScaling = {
- *       scale: (n) => n * 2,
- *       mScale: (n) => n * 1.5,
- *       font: (n) => n,
- *       // ...
- *     };
- *
- *     const mockTheme = { colors: { primary: '#000' } };
- *     const styles = createButtonStyles(mockScaling, mockTheme);
- *
- *     expect(styles.base.paddingHorizontal).toBe(24); // 16 * 1.5
- *   });
- * });
- * ```
  */

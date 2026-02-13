@@ -6,6 +6,7 @@ export const MUSIC_HOME = `${baseURL}/music/home`;
 export const MUSIC_SEARCH = `${baseURL}/music/search`;
 export const MUSIC_ALBUM = (albumId: string) => `${baseURL}/music/album/${albumId}`;
 export const MUSIC_SONG = (songId: string) => `${baseURL}/music/song/${songId}`;
+export const MUSIC_SONG_RECOMMEND = (songId: string) => `${baseURL}/music/song/${songId}/recommend`;
 export const MUSIC_SONG_STREAM = (songId: string) => `${baseURL}/music/song/${songId}/stream`;
 export const MUSIC_PLAYLIST = (playlistId: string) => `${baseURL}/music/playlist/${playlistId}`;
 export const MUSIC_ARTIST = (artistId: string) => `${baseURL}/music/artist/${artistId}`;

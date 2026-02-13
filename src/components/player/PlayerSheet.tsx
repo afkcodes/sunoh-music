@@ -10,11 +10,12 @@ import { AppTheme } from '../../theme/types';
 import { makeScalingStyles, useScalingStyles } from '../../utils/style.util';
 import { SafeView } from '../common';
 import { Sheet, SheetRef } from '../common/Sheet';
-import { BillList, Heart, MenuDots, Pause, Play, Repeat, Shuffle, SkipNext, SkipPrevious } from '../common/SolarIcons.generated';
+import { BillList, Heart, HeartFill, MenuDots, Pause, Play, Repeat, Shuffle, SkipNext, SkipPrevious } from '../common/SolarIcons.generated';
 import { Text } from '../common/Text';
 
 import { AudioProRepeatMode } from 'react-native-audio-pro';
 import { formatTime, useTrackProgress } from '../../hooks/useTrackProgress';
+import { useLibraryStore } from '../../store/useLibraryStore';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -157,6 +158,7 @@ export const PlayerSheet = forwardRef<SheetRef, {}>((_, ref) => {
     setRepeatMode,
     setShuffleMode,
   } = usePlayer();
+  const { toggleLikeSong, isLiked } = useLibraryStore();
   const { playerTheme, gradientColors } = useArtworkTheme(currentTrack?.artwork);
   const { position, duration } = useTrackProgress();
 
@@ -247,8 +249,27 @@ export const PlayerSheet = forwardRef<SheetRef, {}>((_, ref) => {
                   {currentTrack.artist}
                 </Text>
               </View>
-              <Pressable style={styles.heartButton}>
-                <Heart size={26} color={playerTheme?.primary ?? 'rgba(255, 255, 255, 0.8)'} />
+              <Pressable
+                style={styles.heartButton}
+                onPress={() => {
+                  toggleLikeSong({
+                    id: currentTrack.id,
+                    type: 'song',
+                    title: currentTrack.title,
+                    image: currentTrack.artwork,
+                    subtitle: currentTrack.artist,
+                    timestamp: Date.now(),
+                    duration: duration / 1000,
+                    fullData: (currentTrack as any).fullData,
+                    provider: (currentTrack as any).provider,
+                  });
+                }}
+              >
+                {isLiked(currentTrack.id, 'song') ? (
+                  <HeartFill size={26} color={playerTheme?.primary ?? '#FFF'} />
+                ) : (
+                  <Heart size={26} color={playerTheme?.primary ?? 'rgba(255, 255, 255, 0.8)'} />
+                )}
               </Pressable>
             </View>
 
@@ -318,7 +339,7 @@ export const PlayerSheet = forwardRef<SheetRef, {}>((_, ref) => {
           </SafeView>
         </LinearGradient>
       </View>
-    </Sheet>
+    </Sheet >
   );
 });
 

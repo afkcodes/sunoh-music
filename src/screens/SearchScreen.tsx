@@ -175,25 +175,27 @@ const SearchResultRow = memo(({ item, provider }: { item: SaavnItem; provider: s
   const theme = useTheme();
   const styles = useScalingStyles(createStyles, theme);
   const { navigateToItem } = useMediaNavigation();
+
+  if (!item) return null;
   const props = getMediaItemProps(item, provider);
 
   return (
     <TouchableOpacity
       activeOpacity={0.7}
-      onPress={() => navigateToItem(item, provider)}
+      onPress={() => props.token && navigateToItem(item, provider)}
       style={styles.searchRow}
     >
       <TurboImage
-        source={{ uri: props.imageUrl }}
+        source={{ uri: props.imageUrl || '' }}
         style={[styles.searchRowImage, props.isCircle && { borderRadius: 28 }]}
         resizeMode="cover"
       />
       <View style={styles.searchRowInfo}>
         <Text variant="body" style={{ fontWeight: '600' }} numberOfLines={1}>
-          {decodeHtmlEntities(props.title)}
+          {decodeHtmlEntities(props.title || 'Unknown Title')}
         </Text>
         <Text variant="caption" color="secondary" numberOfLines={1}>
-          {decodeHtmlEntities(props.subtitle)}
+          {decodeHtmlEntities(props.subtitle || '')}
         </Text>
       </View>
     </TouchableOpacity>
@@ -203,11 +205,14 @@ const SearchResultRow = memo(({ item, provider }: { item: SaavnItem; provider: s
 const BrowseCard = memo(({ item }: { item: Occasion }) => {
   const theme = useTheme();
   const styles = useScalingStyles(createStyles, theme);
+
+  if (!item) return null;
   const props = getMediaItemProps(item, 'gaana');
 
   const handlePress = () => {
+    if (!props.token) return;
     searchNavigator.navigate(Routes.SectionDetail, {
-      sectionId: props.token, // Standardized from config url/slug/id
+      sectionId: props.token,
       title: props.title,
       provider: 'gaana',
       isOccasion: true,
@@ -222,7 +227,7 @@ const BrowseCard = memo(({ item }: { item: Occasion }) => {
     >
       <SquircleView style={styles.cardInner} cornerSmoothing={1}>
         <TurboImage
-          source={{ uri: props.imageUrl }}
+          source={{ uri: props.imageUrl || '' }}
           style={styles.gridImage}
           resizeMode="cover"
         />
@@ -231,7 +236,7 @@ const BrowseCard = memo(({ item }: { item: Occasion }) => {
           style={styles.gridGradient}
         >
           <Text variant="body" color="onPrimary" style={{ fontWeight: 'bold' }} numberOfLines={1}>
-            {props.title}
+            {props.title || 'Category'}
           </Text>
         </LinearGradient>
       </SquircleView>
@@ -253,11 +258,11 @@ const SearchScreen = () => {
   const { stateNavigator } = useNavigationEvent();
 
   const occasions = useMemo(() => {
-    if (Array.isArray(occasionsData)) return occasionsData;
+    if (Array.isArray(occasionsData)) return occasionsData.filter(Boolean);
     if (occasionsData && typeof occasionsData === 'object') {
       const d = occasionsData as any;
-      if (Array.isArray(d.occasions)) return d.occasions;
-      if (Array.isArray(d.data)) return d.data;
+      if (Array.isArray(d.occasions)) return d.occasions.filter(Boolean);
+      if (Array.isArray(d.data)) return d.data.filter(Boolean);
     }
     return [];
   }, [occasionsData]);
@@ -272,10 +277,11 @@ const SearchScreen = () => {
     const playlistsMap = new Map<string, SaavnItem>();
 
     sections.forEach(section => {
+      if (!section || !section.heading || !Array.isArray(section.data)) return;
       const heading = section.heading.toLowerCase();
 
       section.data.forEach(item => {
-        if (!item.id) return;
+        if (!item || !item.id) return;
 
         // Merge "Trending" results into Songs if they are primarily songs
         if (heading.includes('song') || heading.includes('trending')) {
@@ -383,9 +389,9 @@ const SearchScreen = () => {
                 {/* Results Sections */}
                 {(() => {
                   const topResultSection = searchResults?.data?.find((s: any) =>
-                    s.heading.toLowerCase() === 'top results'
+                    s?.heading?.toLowerCase() === 'top results'
                   );
-                  const topResults = topResultSection?.data || [];
+                  const topResults = Array.isArray(topResultSection?.data) ? topResultSection.data : [];
                   const displayedTopResults = topResults.slice(0, 5);
                   const hasMoreTopResults = topResults.length > 5;
 
@@ -399,10 +405,13 @@ const SearchScreen = () => {
                     });
                   };
 
-                  const songsSection = searchResults?.data?.find((s: any) => s.heading.toLowerCase() === 'songs');
+                  const songsSection = searchResults?.data?.find((s: any) => s?.heading?.toLowerCase() === 'songs');
+                  const songResults = Array.isArray(songsSection?.data) ? songsSection.data : [];
 
                   const otherSections = searchResults?.data?.filter((s: any) =>
+                    s?.heading &&
                     !['topquery', 'top results', 'songs'].includes(s.heading.toLowerCase()) &&
+                    Array.isArray(s.data) &&
                     s.data.length > 0
                   );
 
@@ -422,13 +431,13 @@ const SearchScreen = () => {
                         </View>
                       )}
 
-                      {songsSection && (
+                      {songResults.length > 0 && (
                         <View style={styles.searchResultsSection}>
                           <SectionHeader
                             title="Songs"
                             style={{ marginBottom: 16, paddingHorizontal: 0, marginTop: 0 }}
                           />
-                          {songsSection.data.slice(0, 5).map((item: SaavnItem) => (
+                          {songResults.slice(0, 5).map((item: SaavnItem) => (
                             <SearchResultRow key={item.id} item={item} provider="unified" />
                           ))}
                         </View>
