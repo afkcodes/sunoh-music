@@ -51,6 +51,23 @@ const dataConfigs = {
     id: 'id',
     language: 'language',
     name: 'name',
+    title: ['title', 'name'],
+    image: ['image.2.link', 'image.0.link', 'artwork', 'atw', 'atwj'],
+    subtitle: ['subtitle', 'description'],
+  },
+  radio_station: {
+    id: ['id', 'stationid'],
+    language: 'language',
+    name: 'name',
+    title: ['title', 'name'],
+    image: ['image.2.link', 'image.0.link', 'artwork', 'atw', 'atwj'],
+    subtitle: ['subtitle', 'description'],
+  },
+  channel: {
+    id: 'id',
+    title: ['title', 'name'],
+    image: ['image.2.link', 'image.0.link', 'artwork', 'atw', 'atwj'],
+    subtitle: ['subtitle', 'description'],
   },
   occasion: {
     id: 'id',
