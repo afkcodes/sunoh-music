@@ -31,7 +31,6 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
   gradient: {
     flex: 1,
     paddingHorizontal: s.mScale(20),
-    paddingTop: s.vScale(16),
   },
   header: {
     alignItems: 'center',

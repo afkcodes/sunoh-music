@@ -17,6 +17,8 @@ interface PlayerAppState {
   queue: AudioProTrack[];
   optimisticCurrentTrack: AudioProTrack | null;
   isFetching: boolean;
+  radioId: string | null;
+  radioProvider: 'saavn' | 'gaana' | 'unified' | null;
 
   // Actions
   play: (track?: AudioProTrack) => void;
@@ -43,6 +45,7 @@ interface PlayerAppState {
   setInitialized: (initialized: boolean) => void;
   setOptimisticCurrentTrack: (track: AudioProTrack | null) => void;
   setIsFetching: (isFetching: boolean) => void;
+  setRadio: (radioId: string | null, provider: 'saavn' | 'gaana' | 'unified' | null) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -94,6 +97,8 @@ export const usePlayerStore = create<PlayerAppState>((set, get) => {
     shuffleMode: false,
     isInitialized: false,
     isFetching: false,
+    radioId: null,
+    radioProvider: null,
 
     play: (track) => {
       audioService.play(track);
@@ -183,6 +188,7 @@ export const usePlayerStore = create<PlayerAppState>((set, get) => {
       get().syncQueue();
     },
     setIsFetching: (isFetching) => set({ isFetching }),
+    setRadio: (radioId, radioProvider) => set({ radioId, radioProvider }),
   };
 });
 

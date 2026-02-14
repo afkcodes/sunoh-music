@@ -1,25 +1,22 @@
-import { LegendList } from '@legendapp/list';
-import React, { forwardRef, useCallback, useImperativeHandle } from 'react';
-import { Pressable, View } from 'react-native';
-import { AudioProTrack } from 'react-native-audio-pro';
+import React, { forwardRef, useCallback, useImperativeHandle, useMemo } from 'react';
+import { Dimensions, Pressable, ScrollView, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import Sortable from 'react-native-sortables';
-import TurboImage from 'react-native-turbo-image';
+import Sortable, { SortableFlexDragEndParams } from 'react-native-sortables';
 import { usePlayer } from '../../store/usePlayerStore';
 import { useTheme } from '../../theme/ThemeContext';
 import { AppTheme } from '../../theme/types';
-import { decodeHtmlEntities } from '../../utils/htmlDecode';
 import { makeScalingStyles, useScalingStyles } from '../../utils/style.util';
-import { PlayingIndicator } from '../common/PlayingIndicator';
+import { ExtendedTrack } from '../../utils/trackMapping';
+import { SongListItem } from '../album/SongListItem';
 import { Sheet, SheetRef } from '../common/Sheet';
-import { GripVertical } from '../common/SolarIcons.generated';
 import { Text } from '../common/Text';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.bgSurface,
-    paddingHorizontal: s.mScale(8)
   },
   header: {
     paddingHorizontal: s.mScale(20),
@@ -47,110 +44,78 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
     fontSize: s.font(14),
     color: theme.colors.primaryBase,
   },
-  trackItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: s.mScale(8),
-    gap: s.mScale(12),
-    backgroundColor: theme.colors.bgSurface,
-  },
-  artwork: {
-    width: s.mScale(48),
-    height: s.mScale(48),
-    borderRadius: s.mScale(6),
-    backgroundColor: theme.colors.bgSurfaceHover,
-  },
-  infoContainer: {
+  scrollView: {
     flex: 1,
-    justifyContent: 'center',
-  },
-  trackTitle: {
-    fontSize: s.font(15),
-    fontWeight: '600',
-  },
-  trackArtist: {
-    fontSize: s.font(13),
-    opacity: 0.6,
-    marginTop: s.mScale(2),
-  },
-  indicatorContainer: {
-    width: s.mScale(24),
-    height: s.mScale(24),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dragHandle: {
-    width: s.mScale(40),
-    height: s.mScale(48),
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.colors.bgSurfaceHover,
-    borderRadius: s.mScale(8),
-    borderWidth: 1,
-    borderColor: theme.colors.borderSubtle,
-  },
-  trackContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    gap: s.mScale(12),
   },
 }));
+
+interface QueueItemProps {
+  item: ExtendedTrack;
+  index: number;
+  currentTrackId: string | undefined;
+  skipToTrack: (index: number) => void;
+  isAudioPlaying: boolean;
+}
+
+const QueueItem = React.memo(({ item, index, currentTrackId, skipToTrack, isAudioPlaying }: QueueItemProps) => {
+  const song = item.fullData;
+  const isCurrentTrack = currentTrackId === item.id;
+
+  if (!song) {
+    return null;
+  }
+
+  return (
+    <View style={{ width: SCREEN_WIDTH, maxWidth: SCREEN_WIDTH, overflow: 'hidden' }}>
+      <SongListItem
+        song={song}
+        index={index}
+        isPlaying={isCurrentTrack}
+        isActive={isAudioPlaying}
+        onPress={() => skipToTrack(index)}
+      />
+    </View>
+  );
+});
+
+QueueItem.displayName = 'QueueItem';
 
 export const QueueSheet = forwardRef<SheetRef, {}>((_, ref) => {
   const theme = useTheme();
   const styles = useScalingStyles(createStyles, theme);
   const { queue, currentTrack, skipToTrack, isPlaying, reorder } = usePlayer();
   const sheetRef = React.useRef<SheetRef>(null);
+  const scrollRef = React.useRef<ScrollView>(null);
 
   useImperativeHandle(ref, () => ({
     present: () => sheetRef.current?.present(),
     dismiss: () => sheetRef.current?.dismiss(),
   }));
 
-  const renderItem = useCallback(({ item, index }: { item: AudioProTrack; index: number }) => {
-    const isActive = currentTrack?.id === item.id;
+  const handleDragEnd = useCallback(({ fromIndex, toIndex }: SortableFlexDragEndParams) => {
+    if (fromIndex !== toIndex) {
+      reorder(fromIndex, toIndex);
+    }
+  }, [reorder]);
 
-    return (
-      <View style={styles.trackItem}>
-        <Pressable
-          style={styles.trackContent}
-          onPress={() => skipToTrack(index)}
-        >
-          <TurboImage source={{ uri: item.artwork }} style={styles.artwork} />
-          <View style={styles.infoContainer}>
-            <Text
-              variant="body"
-              numberOfLines={1}
-              style={[styles.trackTitle, isActive && { color: theme.colors.primaryBase }]}
-            >
-              {decodeHtmlEntities(item.title)}
-            </Text>
-            <Text variant="caption" numberOfLines={1} style={styles.trackArtist}>
-              {decodeHtmlEntities(item.artist || '')}
-            </Text>
-          </View>
-
-          {isActive && (
-            <View style={styles.indicatorContainer}>
-              <PlayingIndicator isPlaying={isPlaying} />
-            </View>
-          )}
-        </Pressable>
-
-        <Sortable.Handle>
-          <View style={styles.dragHandle}>
-            <GripVertical size={24} color={theme.colors.textPrimary} />
-          </View>
-        </Sortable.Handle>
-      </View>
-    );
-  }, [currentTrack, skipToTrack, isPlaying, styles, theme.colors.primaryBase, theme.colors.textSecondary]);
+  // Memoize queue items to prevent unnecessary re-renders
+  const queueItems = useMemo(() => {
+    return (queue as ExtendedTrack[]).map((item, index) => (
+      <QueueItem
+        key={item.id}
+        item={item}
+        index={index}
+        currentTrackId={currentTrack?.id}
+        skipToTrack={skipToTrack}
+        isAudioPlaying={isPlaying}
+      />
+    ));
+  }, [queue, currentTrack?.id, skipToTrack, isPlaying]);
 
   return (
     <Sheet
       ref={sheetRef}
-      sizes={[0.9]}
+      sizes={[1]}
       cornerRadius={theme.borderRadius.lg}
       scrollable
     >
@@ -164,29 +129,29 @@ export const QueueSheet = forwardRef<SheetRef, {}>((_, ref) => {
             <Text style={styles.doneText}>Done</Text>
           </Pressable>
         </View>
-        <LegendList
-          style={{ flex: 1 }}
-          nestedScrollEnabled renderToHardwareTextureAndroid showsVerticalScrollIndicator={false} recycleItems contentContainerStyle={{ paddingBottom: 32 }}>
-          <Sortable.Grid
-            data={queue}
-            renderItem={renderItem}
-            keyExtractor={(item: AudioProTrack) => item.id}
-            columns={1}
-            rowGap={0}
-            columnGap={0}
-            customHandle
-            dragActivationDelay={150}
+        <ScrollView
+          ref={scrollRef}
+          style={styles.scrollView}
+          contentContainerStyle={{ paddingBottom: 32 }}
+          nestedScrollEnabled
+        >
+          <Sortable.Flex
+            onDragEnd={handleDragEnd}
+            flexDirection="column"
+            gap={0}
+            width="fill"
+            hapticsEnabled
             activeItemScale={1.02}
             activeItemOpacity={0.9}
-            activeItemShadowOpacity={0.1}
+            activeItemShadowOpacity={0.3}
             inactiveItemOpacity={1}
-            dropAnimationDuration={50}
-            hapticsEnabled
-            onOrderChange={({ fromIndex, toIndex }) => {
-              reorder(fromIndex, toIndex);
-            }}
-          />
-        </LegendList>
+            inactiveItemScale={1}
+            dragActivationDelay={200}
+            dropAnimationDuration={250}
+          >
+            {queueItems}
+          </Sortable.Flex>
+        </ScrollView>
       </GestureHandlerRootView>
     </Sheet>
   );

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { AudioPro, useAudioPro } from 'react-native-audio-pro';
-import { MUSIC_SONG_RECOMMEND } from '../services/api/endpoints';
+import { baseURL, MUSIC_RECOMMEND } from '../services/api/endpoints';
 import { audioService } from '../services/audio/AudioService';
 import { usePlayerStore } from '../store/usePlayerStore';
 import { useUserSettings } from '../store/useUserSettings';
@@ -28,41 +28,58 @@ interface RecommendResponse {
 }
 
 export const useAutoQueue = () => {
-  const { queue } = usePlayerStore();
+  const { queue, radioId, radioProvider } = usePlayerStore();
   const { autoQueueEnabled: enabled, autoQueueThreshold: threshold } = useUserSettings();
   const isFetchingRef = useRef(false);
   const lastFetchedSongIdRef = useRef<string | null>(null);
   const addedSongIdsRef = useRef<Set<string>>(new Set());
+  const radioNextBatchRef = useRef<number>(1);
 
   // Listen to track changes to trigger auto-queue
   const currentTrack = useAudioPro((s) => s.trackPlaying);
 
   /**
-   * Fetch recommended songs for current track
+   * Fetch more tracks (either Radio or Recommendations)
    */
-  const fetchRecommendations = async (track: any): Promise<number> => {
+  const fetchMoreTracks = async (track: any): Promise<number> => {
     try {
-      const provider = track.provider || 'saavn';
-      console.log(`🔍 Auto-Queue: Fetching recommendations for "${track.title}" [${provider}]`);
+      let apiUrl = '';
+      let isRadio = !!radioId;
 
-      const response = await fetch(`${MUSIC_SONG_RECOMMEND(track.id)}?provider=${provider}`);
+      if (isRadio) {
+        console.log(`📻 Auto-Queue: Fetching next radio batch for "${radioId}" [${radioProvider}]`);
+        apiUrl = `${baseURL}/music/radio/${radioId}?provider=${radioProvider}`;
+        if (radioProvider === 'saavn') {
+          apiUrl += `&next=${radioNextBatchRef.current}`;
+        }
+      } else {
+        const provider = track.provider || 'saavn';
+        apiUrl = `${MUSIC_RECOMMEND(track.id)}&provider=${provider}`;
+        console.log(`🔍 Auto-Queue: Fetching recommendations for "${track.title}" [${track.id}]`);
+      }
+
+      console.log(`📡 Auto-Queue API Call:`, apiUrl);
+
+      const response = await fetch(apiUrl);
       const data: RecommendResponse = await response.json();
 
-      console.log(`📦 Recommend API Response:`, {
+      console.log(`📦 Auto-Queue API Response:`, {
         status: data.status,
-        songsCount: data.data?.length || 0,
+        tracksCount: (data.data as any)?.list?.length || data.data?.length || 0,
       });
 
-      if (data.status === 'success' && Array.isArray(data.data) && data.data.length > 0) {
+      if (data.status === 'success' && data.data) {
+        const rawTracks = (data.data as any).list || data.data;
+
+        if (!Array.isArray(rawTracks) || rawTracks.length === 0) {
+          console.log(`❌ No tracks returned`);
+          return 0;
+        }
+
         const currentQueueIds = new Set(queue.map((t) => t.id));
 
-        console.log(`🔍 Filtering ${data.data.length} recommended songs...`, {
-          inQueue: currentQueueIds.size,
-          alreadyAdded: addedSongIdsRef.current.size,
-        });
-
-        const newSongs = data.data
-          .filter((song) => {
+        const newSongs = rawTracks
+          .filter((song: any) => {
             const isDuplicate = currentQueueIds.has(song.id) || addedSongIdsRef.current.has(song.id);
             if (!isDuplicate) {
               addedSongIdsRef.current.add(song.id);
@@ -73,21 +90,30 @@ export const useAutoQueue = () => {
           .map(mapSongToTrack);
 
         if (newSongs.length > 0) {
-          console.log(`✅ Adding ${newSongs.length} recommended songs`);
-          console.log(`📋 Songs:`, newSongs.map(s => s.title).slice(0, 3).join(', ') + (newSongs.length > 3 ? '...' : ''));
+          console.log(`✅ Adding ${newSongs.length} tracks`);
           audioService.addMediaItems(newSongs);
           usePlayerStore.getState().syncQueue();
+
+          if (isRadio && radioProvider === 'saavn') {
+            radioNextBatchRef.current += 1;
+          }
+
           return newSongs.length;
         } else {
-          console.log(`⚠️  All recommended songs were duplicates`);
+          console.log(`⚠️  All fetched tracks were duplicates`);
+          // If all duplicates and it's Saavn radio, maybe try next page immediately?
+          if (isRadio && radioProvider === 'saavn') {
+            radioNextBatchRef.current += 1;
+            return fetchMoreTracks(track);
+          }
         }
       } else {
-        console.log(`❌ No recommendations returned`);
+        console.log(`❌ API Error or empty data`);
       }
 
       return 0;
     } catch (error) {
-      console.error(`💥 ERROR fetching recommendations:`, error);
+      console.error(`💥 ERROR fetching auto-queue tracks:`, error);
       return 0;
     }
   };
@@ -111,21 +137,21 @@ export const useAutoQueue = () => {
       const shouldFetch = remainingSongs <= threshold;
 
       if (shouldFetch) {
-        // Don't fetch if already fetched for this song
-        if (lastFetchedSongIdRef.current === currentTrack.id) {
+        // Don't fetch if already fetched for this song (ignoring for Radio mode as we want multiple batches)
+        if (!radioId && lastFetchedSongIdRef.current === currentTrack.id) {
           return;
         }
 
-        console.log(`🎵 Auto-Queue: TRIGGERED`);
+        console.log(`🎵 Auto-Queue: TRIGGERED (Radio: ${!!radioId})`);
         console.log(`🎵 Auto-Queue: Remaining songs: ${remainingSongs} (threshold: ${threshold})`);
 
         isFetchingRef.current = true;
         lastFetchedSongIdRef.current = currentTrack.id;
 
         try {
-          const songsAdded = await fetchRecommendations(currentTrack);
+          const songsAdded = await fetchMoreTracks(currentTrack);
           if (songsAdded > 0) {
-            console.log(`🎵 Auto-Queue: ✅ SUCCESS - Added ${songsAdded} songs`);
+            console.log(`🎵 Auto-Queue: ✅ SUCCESS - Added ${songsAdded} tracks`);
           }
         } catch (error) {
           console.error('🎵 Auto-Queue: 💥 Error:', error);
@@ -138,12 +164,19 @@ export const useAutoQueue = () => {
     checkAndFetchSimilar();
   }, [currentTrack, queue, enabled, threshold]);
 
+  useEffect(() => {
+    radioNextBatchRef.current = 1;
+    addedSongIdsRef.current.clear();
+  }, [radioId]);
+
   // Reset tracking when queue is cleared
   useEffect(() => {
     if (queue.length === 0) {
       console.log('🔄 Auto-Queue: Queue cleared - resetting tracking state');
       addedSongIdsRef.current.clear();
       lastFetchedSongIdRef.current = null;
+      radioNextBatchRef.current = 1;
+      usePlayerStore.getState().setRadio(null, null);
     }
   }, [queue.length]);
 

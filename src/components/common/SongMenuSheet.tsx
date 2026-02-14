@@ -1,5 +1,5 @@
 import { useNavigationEvent } from 'navigation-react';
-import React, { forwardRef } from 'react';
+import React from 'react';
 import { Pressable, View } from 'react-native';
 import ShareModule from 'react-native-share';
 import TurboImage from 'react-native-turbo-image';
@@ -61,25 +61,31 @@ const createStyles = makeScalingStyles((s, _colors) => ({
   }
 }));
 
-export const SongMenuSheet = forwardRef<SheetRef>((_, ref) => {
+export const SongMenuSheet = () => {
   const { colors } = useTheme();
   const styles = useScalingStyles(createStyles, colors);
-  const { song, hideSongMenu } = useMenuStore();
+  const { song, visible, hideSongMenu } = useMenuStore();
   const { isLiked, toggleLikeSong } = useLibraryStore();
   const { playNext, addToQueue } = usePlayer();
   const { stateNavigator } = useNavigationEvent();
+  const sheetRef = React.useRef<SheetRef>(null);
+
+  // Auto-present when visible becomes true
+  React.useEffect(() => {
+    if (visible && song) {
+      sheetRef.current?.present();
+    }
+  }, [visible, song]);
 
   const liked = song ? isLiked(song.id, 'song') : false;
 
   const handleAction = (action: () => void) => {
     action();
-    (ref as any).current?.dismiss();
-    hideSongMenu();
+    sheetRef.current?.dismiss();
+    // hideSongMenu is called by onDismiss
   };
 
-  if (!song) return null;
-
-  const menuItems = [
+  const menuItems = song ? [
     {
       label: liked ? 'Remove from Favorites' : 'Add to Favorites',
       icon: liked ? HeartFill : Heart,
@@ -144,42 +150,46 @@ export const SongMenuSheet = forwardRef<SheetRef>((_, ref) => {
         }
       },
     },
-  ];
+  ] : [];
+
+  const handleDismiss = () => {
+    hideSongMenu();
+  };
 
   return (
-    <Sheet ref={ref} sizes={['auto']}>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <TurboImage
-            source={{ uri: song.image?.[song.image.length - 1]?.link || '' }}
-            style={styles.artwork}
-          />
-          <View style={styles.headerText}>
-            <Text variant="h3" numberOfLines={1}>{decodeHtmlEntities(song.title)}</Text>
-            <Text variant="body" color="secondary" numberOfLines={1}>
-              {decodeHtmlEntities(song.artists?.map(a => a.name).join(', ') || song.subtitle)}
-            </Text>
+    <Sheet ref={sheetRef} sizes={['auto']} onDismiss={handleDismiss}>
+      {song && (
+        <View style={styles.content}>
+          <View style={styles.header}>
+            <TurboImage
+              source={{ uri: song.image?.[song.image.length - 1]?.link || '' }}
+              style={styles.artwork}
+            />
+            <View style={styles.headerText}>
+              <Text variant="h3" numberOfLines={1}>{decodeHtmlEntities(song.title)}</Text>
+              <Text variant="body" color="secondary" numberOfLines={1}>
+                {decodeHtmlEntities(song.artists?.map(a => a.name).join(', ') || song.subtitle)}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.menuList}>
+            {menuItems.map((item, index) => (
+              <Pressable
+                key={index}
+                style={({ pressed }) => [
+                  styles.menuItem,
+                  pressed && { backgroundColor: colors.bgSurfaceHover }
+                ]}
+                onPress={() => handleAction(item.onPress)}
+              >
+                <item.icon size={24} color={item.iconColor || colors.textPrimary} />
+                <Text style={styles.menuItemText}>{item.label}</Text>
+              </Pressable>
+            ))}
           </View>
         </View>
-
-        <View style={styles.menuList}>
-          {menuItems.map((item, index) => (
-            <Pressable
-              key={index}
-              style={({ pressed }) => [
-                styles.menuItem,
-                pressed && { backgroundColor: colors.bgSurfaceHover }
-              ]}
-              onPress={() => handleAction(item.onPress)}
-            >
-              <item.icon size={24} color={item.iconColor || colors.textPrimary} />
-              <Text style={styles.menuItemText}>{item.label}</Text>
-            </Pressable>
-          ))}
-        </View>
-      </View>
+      )}
     </Sheet>
   );
-});
-
-SongMenuSheet.displayName = 'SongMenuSheet';
+};

@@ -10,6 +10,7 @@ export const Routes = {
   Home: 'home',
   Album: 'album',
   Song: 'song',
+  Artist: 'artist',
   SectionDetail: 'sectionDetail',
   Details: 'details',
 

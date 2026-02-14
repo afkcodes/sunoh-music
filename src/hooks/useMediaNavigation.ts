@@ -1,7 +1,7 @@
 import { useNavigationEvent } from 'navigation-react';
 import { useCallback } from 'react';
 import { Routes } from '../app/navigation/routes';
-import { MUSIC_SONG } from '../services/api/endpoints';
+import { baseURL, MUSIC_SONG } from '../services/api/endpoints';
 import { usePlayer, usePlayerStore } from '../store/usePlayerStore';
 import { SaavnItem } from '../types/saavn';
 import { getMediaItemProps } from '../utils/media';
@@ -31,7 +31,11 @@ export const useMediaNavigation = () => {
         // In search (and general item lists), start playing the song instead of navigating
         console.log('🎵 MediaNav: Playing song', props.title);
         try {
-          const { setIsFetching, setOptimisticCurrentTrack } = usePlayerStore.getState();
+          const { setIsFetching, setOptimisticCurrentTrack, setRadio } = usePlayerStore.getState();
+
+          // Clear radio when starting a direct song (unless you want standard recommendations to kick in)
+          // For now, let's keep it simple: new song = auto-queue (recommendations)
+          setRadio(null, null);
 
           // Set optimistic track info immediately so UI updates
           setOptimisticCurrentTrack({
@@ -61,9 +65,66 @@ export const useMediaNavigation = () => {
           usePlayerStore.getState().setIsFetching(false);
         }
         break;
+
+      case 'artist':
+        stateNavigator.navigate(Routes.Artist, {
+          artistId: props.id,
+          provider: props.provider
+        });
+        break;
+
+      case 'radio_station':
+      case 'channel':
+        console.log('📻 MediaNav: Starting radio', { title: props.title, id: props.id, type: props.type, provider: props.provider });
+        try {
+          const { setIsFetching, setRadio } = usePlayerStore.getState();
+          setIsFetching(true);
+
+          // Clear existing queue and set new radio
+          setRadio(props.id, props.provider as any);
+
+          const url = `${baseURL}/music/radio/${props.id}?provider=${props.provider}`;
+          console.log('📡 MediaNav: Fetching radio tracks from:', url);
+
+          const response = await fetch(url);
+          const res = await response.json();
+
+          console.log('📦 MediaNav: Radio response received:', {
+            status: res.status,
+            hasData: !!res.data,
+            itemsCount: Array.isArray(res.data) ? res.data.length : (res.data?.list?.length || 0)
+          });
+
+          if (res.status === 'success' && res.data) {
+            const tracks = Array.isArray(res.data)
+              ? res.data.map(mapSongToTrack)
+              : (res.data.list || []).map(mapSongToTrack);
+
+            const realStationId = res.data.stationId || props.id;
+            console.log(`🎵 MediaNav: Mapping complete. Derived ${tracks.length} tracks. Real Station ID: ${realStationId}`);
+
+            if (tracks.length > 0) {
+              // Update with real station ID from backend
+              setRadio(realStationId, props.provider as any);
+
+              const { playQueue } = usePlayerStore.getState();
+              playQueue(tracks);
+            } else {
+              console.warn('⚠️ MediaNav: Radio station returned 0 tracks');
+            }
+          } else {
+            console.error('❌ MediaNav: Radio fetch failed or returned no data', res.message || 'No message');
+          }
+        } catch (error) {
+          console.error('💥 MediaNav: Error playing radio:', error);
+        } finally {
+          usePlayerStore.getState().setIsFetching(false);
+          console.log('🔄 MediaNav: Radio loading state cleared');
+        }
+        break;
       // Add more cases here as needed (artist, radio, etc.)
       default:
-        console.warn(`Navigation not implemented for type: ${props.type}`);
+        console.warn(`🚀 MediaNav: Navigation not implemented for type: ${props.type}`, props);
         break;
     }
   }, [stateNavigator, play]);

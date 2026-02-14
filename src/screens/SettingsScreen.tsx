@@ -15,14 +15,17 @@ import { SafeView } from '../components/common/SafeView';
 import { Sheet, SheetRef } from '../components/common/Sheet';
 import {
   AltArrowRight,
+  BillList,
   CheckCircle,
   HandMoney,
   HeartFill,
   InfoCircle,
+  MusicNote,
   Play,
   Restart,
   Share,
   ShieldCheck,
+  Soundwave,
   TrashBin2,
   UsersGroupRounded
 } from '../components/common/SolarIcons.generated';
@@ -354,7 +357,7 @@ const SettingsScreen = () => {
               onPress={() => langSheetRef.current?.present()}
             />
             <SettingsItem
-              icon={<Wifi size={18} color={colors.primaryBase} />}
+              icon={<Soundwave size={18} color={colors.primaryBase} />}
               label="Streaming Quality"
               value={streamingQuality}
               onPress={() => openQualitySheet('streaming')}

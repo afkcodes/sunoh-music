@@ -14,7 +14,7 @@ import {
   HeartFill,
   Layers,
   Magnifer,
-  MenuDots,
+  MenuDotsVertical,
   MusicNote,
   User,
   UsersGroupRounded
@@ -282,7 +282,7 @@ const LibraryListItem = memo(({
         </Text>
       </View>
       <View style={{ padding: 4 }}>
-        <MenuDots size={s.mScale(20)} color={colors.textTertiary} />
+        <MenuDotsVertical size={s.mScale(20)} color={colors.textTertiary} />
       </View>
     </Pressable>
   );

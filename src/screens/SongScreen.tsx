@@ -20,7 +20,7 @@ import {
   ArrowLeft,
   Heart,
   HeartFill,
-  MenuDots,
+  MenuDotsVertical,
   Pause,
   Play,
   Share,
@@ -252,7 +252,7 @@ const SongHeader = React.memo<{
           <View style={styles.actionButtonsRow}>
             {/* Left: 3-dot Menu */}
             <Pressable onPress={() => console.log('Menu pressed')} style={styles.iconButton}>
-              <MenuDots size={24} color={colors.textPrimary} />
+              <MenuDotsVertical size={24} color={colors.textPrimary} />
             </Pressable>
 
             {/* Right: Icons + Play Button */}
@@ -640,7 +640,7 @@ export const SongScreen: React.FC = () => {
               iconThemeAnimatedStyle,
             ]}
           >
-            <MenuDots size={24} color={colors.textPrimary} />
+            <MenuDotsVertical size={24} color={colors.textPrimary} />
           </Animated.View>
         </Pressable>
       </Animated.View>

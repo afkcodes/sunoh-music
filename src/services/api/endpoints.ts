@@ -6,7 +6,6 @@ export const MUSIC_HOME = `${baseURL}/music/home`;
 export const MUSIC_SEARCH = `${baseURL}/music/search`;
 export const MUSIC_ALBUM = (albumId: string) => `${baseURL}/music/album/${albumId}`;
 export const MUSIC_SONG = (songId: string) => `${baseURL}/music/song/${songId}`;
-export const MUSIC_SONG_RECOMMEND = (songId: string) => `${baseURL}/music/song/${songId}/recommend`;
 export const MUSIC_SONG_STREAM = (songId: string) => `${baseURL}/music/song/${songId}/stream`;
 export const MUSIC_PLAYLIST = (playlistId: string) => `${baseURL}/music/playlist/${playlistId}`;
 export const MUSIC_ARTIST = (artistId: string) => `${baseURL}/music/artist/${artistId}`;
@@ -15,6 +14,11 @@ export const MUSIC_ALBUM_LIST = `${baseURL}/music/album-list`;
 export const MUSIC_OCCASIONS = `${baseURL}/music/occasions`;
 export const MUSIC_OCCASIONS_DETAIL = (slug: string) => `${baseURL}/music/occasions/${slug}`;
 export const MUSIC_LANGUAGES = `${baseURL}/music/languages`;
+export const MUSIC_RADIO_BROWSE = `${baseURL}/music/radio`;
+export const MUSIC_RADIO_DETAIL = (radioId: string) => `${baseURL}/music/radio/${radioId}`;
+export const MUSIC_ARTIST_RADIO = (artistId: string) => `${baseURL}/music/artist/${artistId}/radio`;
+export const MUSIC_RECOMMEND = (id: string) => `${baseURL}/music/recommend?songId=${id}`;
+export const MUSIC_RECOMMEND_SEARCH = (query: string) => `${baseURL}/music/recommend?q=${query}`;
 
 // Lyrics Endpoints
 export const LYRICS_GET = (songName: string) => `${baseURL}/lyrics/${songName}`;
@@ -34,6 +38,10 @@ export const musicEndpoints = {
   artist: MUSIC_ARTIST,
   collection: MUSIC_COLLECTION,
   albumList: MUSIC_ALBUM_LIST,
+  radioBrowse: MUSIC_RADIO_BROWSE,
+  radioDetail: MUSIC_RADIO_DETAIL,
+  artistRadio: MUSIC_ARTIST_RADIO,
+  recommend: MUSIC_RECOMMEND,
 };
 
 export const endpoints = {

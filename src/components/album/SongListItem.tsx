@@ -23,7 +23,7 @@ import { Song } from '../../types/album';
 import { decodeHtmlEntities } from '../../utils/htmlDecode';
 import { makeScalingStyles, useScalingStyles } from '../../utils/style.util';
 import { PlayingIndicator } from '../common/PlayingIndicator';
-import { Heart, HeartFill, MenuDots } from '../common/SolarIcons.generated';
+import { Heart, HeartFill, MenuDotsVertical } from '../common/SolarIcons.generated';
 import { Text } from '../common/Text';
 import { ActiveSongProgress } from './ActiveSongProgress';
 
@@ -33,6 +33,7 @@ interface SongListItemProps {
   isPlaying?: boolean; // This means "is this the active track"
   isActive?: boolean; // This means "is audio playing"
   onPress: () => void;
+  onLongPress?: () => void;
 }
 
 const createStyles = makeScalingStyles((s, colors: ThemeColors) => ({
@@ -50,16 +51,20 @@ const createStyles = makeScalingStyles((s, colors: ThemeColors) => ({
     height: s.mScale(32),
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   // playIcon style removed 
   content: {
     flex: 1,
+    flexShrink: 1,
     gap: s.mScale(4),
+    minWidth: 0,
   },
   metadata: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: s.mScale(6),
+    flex: 1,
   },
   dot: {
     width: s.mScale(3),
@@ -71,6 +76,7 @@ const createStyles = makeScalingStyles((s, colors: ThemeColors) => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: s.mScale(8),
+    flexShrink: 0,
   },
   actionButton: {
     width: s.mScale(36),
@@ -85,7 +91,8 @@ export const SongListItem: React.FC<SongListItemProps> = memo(({
   index,
   isPlaying = false,
   isActive = false,
-  onPress
+  onPress,
+  onLongPress
 }) => {
   const { colors } = useTheme();
   const styles = useScalingStyles(createStyles, colors);
@@ -147,6 +154,7 @@ export const SongListItem: React.FC<SongListItemProps> = memo(({
     <Animated.View style={animatedStyle}>
       <Pressable
         onPress={onPress}
+        onLongPress={onLongPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         style={styles.container}
@@ -175,7 +183,7 @@ export const SongListItem: React.FC<SongListItemProps> = memo(({
             {decodeHtmlEntities(song.title)}
           </Text>
           <View style={styles.metadata}>
-            <Text variant="caption" color="secondary" numberOfLines={1}>
+            <Text variant="caption" color="secondary" numberOfLines={1} style={{ flex: 1 }}>
               {decodeHtmlEntities(song.artists?.map(a => a.name).join(', ') || song.subtitle)}
             </Text>
           </View>
@@ -197,7 +205,7 @@ export const SongListItem: React.FC<SongListItemProps> = memo(({
           </Pressable>
 
           <Pressable style={styles.actionButton} onPress={onMenuPress}>
-            <MenuDots size={20} color={colors.textTertiary} />
+            <MenuDotsVertical size={20} color={colors.textTertiary} />
           </Pressable>
         </View>
       </Pressable>

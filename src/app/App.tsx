@@ -6,13 +6,11 @@ import { StatusBar } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { useEffect } from 'react';
 import { SheetRef } from '../components/common/Sheet';
 import { SongMenuSheet } from '../components/common/SongMenuSheet';
 import { MiniPlayer } from '../components/player/MiniPlayer';
 import { EqualizerSheet, PlayerSheet, QueueSheet } from '../components/player/PlayerSheet';
 import { useAutoQueue } from '../hooks/useAutoQueue';
-import { useMenuStore } from '../store/useMenuStore';
 import { ThemeProvider, useTheme } from '../theme/ThemeContext';
 import { rootNavigator } from './navigation/navigators';
 import { Routes } from './navigation/routes';
@@ -51,16 +49,6 @@ export function App() {
   const playerSheetRef = useRef<SheetRef>(null);
   const queueSheetRef = useRef<SheetRef>(null);
   const equalizerSheetRef = useRef<SheetRef>(null);
-  const songMenuRef = useRef<SheetRef>(null);
-  const visible = useMenuStore(state => state.visible);
-
-  useEffect(() => {
-    if (visible) {
-      songMenuRef.current?.present();
-    } else {
-      songMenuRef.current?.dismiss();
-    }
-  }, [visible]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -76,7 +64,7 @@ export function App() {
             />
             <QueueSheet ref={queueSheetRef} />
             <EqualizerSheet ref={equalizerSheetRef} />
-            <SongMenuSheet ref={songMenuRef} />
+            <SongMenuSheet />
             {/* <ScalingDebugPanel /> */}
           </ThemeProvider>
         </QueryClientProvider>
