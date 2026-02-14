@@ -54,6 +54,7 @@ const dataConfigs = {
     title: ['title', 'name'],
     image: ['image.2.link', 'image.0.link', 'artwork', 'atw', 'atwj'],
     subtitle: ['subtitle', 'description'],
+    token: ['token', 'perma_url', 'id'],
   },
   radio_station: {
     id: ['id', 'stationid'],
@@ -62,12 +63,21 @@ const dataConfigs = {
     title: ['title', 'name'],
     image: ['image.2.link', 'image.0.link', 'artwork', 'atw', 'atwj'],
     subtitle: ['subtitle', 'description'],
+    token: ['token', 'perma_url', 'id'],
   },
   channel: {
     id: 'id',
     title: ['title', 'name'],
     image: ['image.2.link', 'image.0.link', 'artwork', 'atw', 'atwj'],
     subtitle: ['subtitle', 'description'],
+    token: ['token', 'perma_url', 'id'],
+  },
+  artist: {
+    id: ['id', 'artistId'],
+    title: ['title', 'name'],
+    image: ['image.2.link', 'image.0.link', 'artwork', 'atw', 'atwj'],
+    subtitle: ['subtitle', 'type'],
+    token: ['token', 'perma_url', 'id'],
   },
   occasion: {
     id: 'id',

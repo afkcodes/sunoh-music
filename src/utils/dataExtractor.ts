@@ -28,8 +28,10 @@ export function dataExtractor<T>(
   delimiter: string = '.',
   filterFn?: (obj: any[]) => T,
 ): T | undefined {
+  if (keys == null) return undefined;
+
   // If keys is a string, convert it to an array
-  const keyPaths = Array.isArray(keys) ? keys : [keys];
+  const keyPaths = (Array.isArray(keys) ? keys : [keys]).filter(Boolean);
 
 
   // Function to extract data for a single key path
