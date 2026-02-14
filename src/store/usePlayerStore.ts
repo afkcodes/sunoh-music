@@ -19,6 +19,7 @@ interface PlayerAppState {
   isFetching: boolean;
   radioId: string | null;
   radioProvider: 'saavn' | 'gaana' | 'unified' | null;
+  radioLanguage: string | null;
 
   // Actions
   play: (track?: AudioProTrack) => void;
@@ -45,7 +46,7 @@ interface PlayerAppState {
   setInitialized: (initialized: boolean) => void;
   setOptimisticCurrentTrack: (track: AudioProTrack | null) => void;
   setIsFetching: (isFetching: boolean) => void;
-  setRadio: (radioId: string | null, provider: 'saavn' | 'gaana' | 'unified' | null) => void;
+  setRadio: (radioId: string | null, provider: 'saavn' | 'gaana' | 'unified' | null, language?: string | null) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -99,6 +100,7 @@ export const usePlayerStore = create<PlayerAppState>((set, get) => {
     isFetching: false,
     radioId: null,
     radioProvider: null,
+    radioLanguage: null,
 
     play: (track) => {
       audioService.play(track);
@@ -188,7 +190,8 @@ export const usePlayerStore = create<PlayerAppState>((set, get) => {
       get().syncQueue();
     },
     setIsFetching: (isFetching) => set({ isFetching }),
-    setRadio: (radioId, radioProvider) => set({ radioId, radioProvider }),
+    setRadio: (radioId, radioProvider, radioLanguage) =>
+      set({ radioId, radioProvider, radioLanguage: radioLanguage || null }),
   };
 });
 

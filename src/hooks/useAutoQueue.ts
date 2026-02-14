@@ -28,7 +28,7 @@ interface RecommendResponse {
 }
 
 export const useAutoQueue = () => {
-  const { queue, radioId, radioProvider } = usePlayerStore();
+  const { queue, radioId, radioProvider, radioLanguage } = usePlayerStore();
   const { autoQueueEnabled: enabled, autoQueueThreshold: threshold } = useUserSettings();
   const isFetchingRef = useRef(false);
   const lastFetchedSongIdRef = useRef<string | null>(null);
@@ -49,6 +49,9 @@ export const useAutoQueue = () => {
       if (isRadio) {
         console.log(`📻 Auto-Queue: Fetching next radio batch for "${radioId}" [${radioProvider}]`);
         apiUrl = `${baseURL}/music/radio/${radioId}?provider=${radioProvider}`;
+        if (radioLanguage) {
+          apiUrl += `&lang=${radioLanguage}`;
+        }
         if (radioProvider === 'saavn') {
           apiUrl += `&next=${radioNextBatchRef.current}`;
         }

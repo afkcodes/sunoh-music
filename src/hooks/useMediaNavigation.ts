@@ -80,10 +80,13 @@ export const useMediaNavigation = () => {
           const { setIsFetching, setRadio } = usePlayerStore.getState();
           setIsFetching(true);
 
-          // Clear existing queue and set new radio
-          setRadio(props.id, props.provider as any);
+          // Clear existing queue and set new radio with language
+          setRadio(props.id, props.provider as any, props.language);
 
-          const url = `${baseURL}/music/radio/${props.id}?provider=${props.provider}`;
+          let url = `${baseURL}/music/radio/${props.id}?provider=${props.provider}`;
+          if (props.language) {
+            url += `&lang=${props.language}`;
+          }
           console.log('📡 MediaNav: Fetching radio tracks from:', url);
 
           const response = await fetch(url);
@@ -101,11 +104,11 @@ export const useMediaNavigation = () => {
               : (res.data.list || []).map(mapSongToTrack);
 
             const realStationId = res.data.stationId || props.id;
-            console.log(`🎵 MediaNav: Mapping complete. Derived ${tracks.length} tracks. Real Station ID: ${realStationId}`);
+            console.log(`🎵 MediaNav: Mapping complete. Derived ${tracks.length} tracks. Real Station ID: ${realStationId}, Language: ${props.language}`);
 
             if (tracks.length > 0) {
-              // Update with real station ID from backend
-              setRadio(realStationId, props.provider as any);
+              // Update with real station ID from backend and keep language
+              setRadio(realStationId, props.provider as any, props.language);
 
               const { playQueue } = usePlayerStore.getState();
               playQueue(tracks);

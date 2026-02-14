@@ -13,6 +13,7 @@ export interface MediaItemProps {
   type: SaavnItem['type'];
   provider: 'gaana' | 'saavn' | 'spotify' | 'unified';
   isCircle: boolean;
+  language?: string;
 }
 
 /**
@@ -75,6 +76,7 @@ export function getMediaItemProps(
 
   const id = dataExtractor<string>(item as unknown as NestedObject, config.id) || item.id || '';
   const token = dataExtractor<string>(item as unknown as NestedObject, config.token) || id;
+  const language = dataExtractor<string>(item as unknown as NestedObject, (config as any).language) || item.language;
 
   return {
     id,
@@ -85,5 +87,6 @@ export function getMediaItemProps(
     type: itemType,
     provider,
     isCircle,
+    language,
   };
 }
