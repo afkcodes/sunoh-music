@@ -20,6 +20,7 @@ interface PlayerAppState {
   radioId: string | null;
   radioProvider: 'saavn' | 'gaana' | 'unified' | null;
   radioLanguage: string | null;
+  radioType: string | null;
 
   // Actions
   play: (track?: AudioProTrack) => void;
@@ -46,7 +47,7 @@ interface PlayerAppState {
   setInitialized: (initialized: boolean) => void;
   setOptimisticCurrentTrack: (track: AudioProTrack | null) => void;
   setIsFetching: (isFetching: boolean) => void;
-  setRadio: (radioId: string | null, provider: 'saavn' | 'gaana' | 'unified' | null, language?: string | null) => void;
+  setRadio: (radioId: string | null, provider: 'saavn' | 'gaana' | 'unified' | null, language?: string | null, type?: string | null) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -101,17 +102,18 @@ export const usePlayerStore = create<PlayerAppState>((set, get) => {
     radioId: null,
     radioProvider: null,
     radioLanguage: null,
+    radioType: null,
 
     play: (track) => {
       audioService.play(track);
       if (track) {
-        set({ minimized: false, optimisticCurrentTrack: track });
+        set({ minimized: false, optimisticCurrentTrack: track, radioId: null, radioProvider: null, radioLanguage: null, radioType: null });
       }
     },
 
     playQueue: (tracks, startIndex = 0) => {
       audioService.playQueue(tracks, startIndex);
-      set({ queue: tracks, minimized: false });
+      set({ queue: tracks, minimized: false, radioId: null, radioProvider: null, radioLanguage: null, radioType: null });
     },
 
     pause: () => {
@@ -190,8 +192,8 @@ export const usePlayerStore = create<PlayerAppState>((set, get) => {
       get().syncQueue();
     },
     setIsFetching: (isFetching) => set({ isFetching }),
-    setRadio: (radioId, radioProvider, radioLanguage) =>
-      set({ radioId, radioProvider, radioLanguage: radioLanguage || null }),
+    setRadio: (radioId, radioProvider, radioLanguage, radioType) =>
+      set({ radioId, radioProvider, radioLanguage: radioLanguage || null, radioType: radioType || null }),
   };
 });
 

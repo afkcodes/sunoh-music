@@ -81,7 +81,7 @@ export const useMediaNavigation = () => {
           setIsFetching(true);
 
           // Clear existing queue and set new radio with language
-          setRadio(props.id, props.provider as any, props.language);
+          setRadio(props.id, props.provider as any, props.language, props.stationType);
 
           let url = `${baseURL}/music/radio/${props.id}?provider=${props.provider}`;
           if (props.language) {

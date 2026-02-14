@@ -28,7 +28,7 @@ interface RecommendResponse {
 }
 
 export const useAutoQueue = () => {
-  const { queue, radioId, radioProvider, radioLanguage } = usePlayerStore();
+  const { queue, radioId, radioProvider, radioLanguage, radioType } = usePlayerStore();
   const { autoQueueEnabled: enabled, autoQueueThreshold: threshold } = useUserSettings();
   const isFetchingRef = useRef(false);
   const lastFetchedSongIdRef = useRef<string | null>(null);
@@ -52,7 +52,10 @@ export const useAutoQueue = () => {
         if (radioLanguage) {
           apiUrl += `&lang=${radioLanguage}`;
         }
-        if (radioProvider === 'saavn') {
+        if (radioType) {
+          apiUrl += `&type=${radioType}`;
+        }
+        if (radioProvider === 'saavn' || radioProvider === 'unified') {
           apiUrl += `&next=${radioNextBatchRef.current}`;
         }
       } else {
@@ -97,15 +100,15 @@ export const useAutoQueue = () => {
           audioService.addMediaItems(newSongs);
           usePlayerStore.getState().syncQueue();
 
-          if (isRadio && radioProvider === 'saavn') {
+          if (isRadio && (radioProvider === 'saavn' || radioProvider === 'unified')) {
             radioNextBatchRef.current += 1;
           }
 
           return newSongs.length;
         } else {
           console.log(`⚠️  All fetched tracks were duplicates`);
-          // If all duplicates and it's Saavn radio, maybe try next page immediately?
-          if (isRadio && radioProvider === 'saavn') {
+          // If all duplicates and it's Saavn/Unified radio, maybe try next page immediately?
+          if (isRadio && (radioProvider === 'saavn' || radioProvider === 'unified')) {
             radioNextBatchRef.current += 1;
             return fetchMoreTracks(track);
           }
