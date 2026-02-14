@@ -87,6 +87,9 @@ export const useMediaNavigation = () => {
           if (props.language) {
             url += `&lang=${props.language}`;
           }
+          if (props.stationType) {
+            url += `&type=${props.stationType}`;
+          }
           console.log('📡 MediaNav: Fetching radio tracks from:', url);
 
           const response = await fetch(url);

@@ -14,6 +14,7 @@ export interface MediaItemProps {
   provider: 'gaana' | 'saavn' | 'spotify' | 'unified';
   isCircle: boolean;
   language?: string;
+  stationType?: string;
 }
 
 /**
@@ -88,5 +89,6 @@ export function getMediaItemProps(
     provider,
     isCircle,
     language,
+    stationType: item.stationType || item.station_type,
   };
 }
