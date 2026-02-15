@@ -47,21 +47,18 @@ export const useAutoQueue = () => {
       let isRadio = !!radioId;
 
       if (isRadio) {
-        console.log(`📻 Auto-Queue: Fetching next radio batch for "${radioId}" [${radioProvider}]`);
+        console.log(`📻 Auto-Queue: Fetching next radio batch for "${radioId}" [${radioProvider}], Type: ${radioType}, Next: ${radioNextBatchRef.current}`);
         apiUrl = `${baseURL}/music/radio/${radioId}?provider=${radioProvider}`;
-        if (radioLanguage) {
-          apiUrl += `&lang=${radioLanguage}`;
-        }
-        if (radioType) {
-          apiUrl += `&type=${radioType}`;
-        }
+        if (radioLanguage) apiUrl += `&lang=${radioLanguage}`;
+        if (radioType) apiUrl += `&type=${radioType}`;
         if (radioProvider === 'saavn' || radioProvider === 'unified') {
           apiUrl += `&next=${radioNextBatchRef.current}`;
         }
       } else {
         const provider = track.provider || 'saavn';
+        const trackTitle = track.title || 'Unknown Title';
         apiUrl = `${MUSIC_RECOMMEND(track.id)}&provider=${provider}`;
-        console.log(`🔍 Auto-Queue: Fetching recommendations for "${track.title}" [${track.id}]`);
+        console.log(`🔍 Auto-Queue: Fetching recommendations for "${trackTitle}" [${track.id}] [${provider}]`);
       }
 
       console.log(`📡 Auto-Queue API Call:`, apiUrl);
@@ -148,8 +145,8 @@ export const useAutoQueue = () => {
           return;
         }
 
-        console.log(`🎵 Auto-Queue: TRIGGERED (Radio: ${!!radioId})`);
-        console.log(`🎵 Auto-Queue: Remaining songs: ${remainingSongs} (threshold: ${threshold})`);
+        console.log(`🎵 Auto-Queue: TRIGGERED [${radioId ? 'Radio: ' + radioId : 'Recommendations'}]`);
+        console.log(`🎵 Auto-Queue: Remaining: ${remainingSongs}, Current Song: ${currentTrack.title || 'Unknown'}`);
 
         isFetchingRef.current = true;
         lastFetchedSongIdRef.current = currentTrack.id;

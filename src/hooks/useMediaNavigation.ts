@@ -82,8 +82,11 @@ export const useMediaNavigation = () => {
 
           // Clear existing queue and set new radio with language
           setRadio(props.id, props.provider as any, props.language, props.stationType);
-
           let url = `${baseURL}/music/radio/${props.id}?provider=${props.provider}`;
+
+          if (props.stationType === "artist") {
+            url = `${baseURL}/music/radio/${props.title}?provider=${props.provider}`;
+          }
           if (props.language) {
             url += `&lang=${props.language}`;
           }
@@ -111,10 +114,10 @@ export const useMediaNavigation = () => {
 
             if (tracks.length > 0) {
               // Update with real station ID from backend and keep language
-              setRadio(realStationId, props.provider as any, props.language);
+              setRadio(realStationId, props.provider as any, props.language, props.stationType);
 
               const { playQueue } = usePlayerStore.getState();
-              playQueue(tracks);
+              playQueue(tracks, 0, true);
             } else {
               console.warn('⚠️ MediaNav: Radio station returned 0 tracks');
             }

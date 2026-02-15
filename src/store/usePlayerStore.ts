@@ -23,8 +23,8 @@ interface PlayerAppState {
   radioType: string | null;
 
   // Actions
-  play: (track?: AudioProTrack) => void;
-  playQueue: (tracks: AudioProTrack[], startIndex?: number) => void;
+  play: (track?: AudioProTrack, keepContext?: boolean) => void;
+  playQueue: (tracks: AudioProTrack[], startIndex?: number, keepContext?: boolean) => void;
   pause: () => void;
   resume: () => void;
   togglePlayPause: () => void;
@@ -104,16 +104,24 @@ export const usePlayerStore = create<PlayerAppState>((set, get) => {
     radioLanguage: null,
     radioType: null,
 
-    play: (track) => {
+    play: (track, keepContext = false) => {
       audioService.play(track);
       if (track) {
-        set({ minimized: false, optimisticCurrentTrack: track, radioId: null, radioProvider: null, radioLanguage: null, radioType: null });
+        set({
+          minimized: false,
+          optimisticCurrentTrack: track,
+          ...(keepContext ? {} : { radioId: null, radioProvider: null, radioLanguage: null, radioType: null })
+        });
       }
     },
 
-    playQueue: (tracks, startIndex = 0) => {
+    playQueue: (tracks, startIndex = 0, keepContext = false) => {
       audioService.playQueue(tracks, startIndex);
-      set({ queue: tracks, minimized: false, radioId: null, radioProvider: null, radioLanguage: null, radioType: null });
+      set({
+        queue: tracks,
+        minimized: false,
+        ...(keepContext ? {} : { radioId: null, radioProvider: null, radioLanguage: null, radioType: null })
+      });
     },
 
     pause: () => {
