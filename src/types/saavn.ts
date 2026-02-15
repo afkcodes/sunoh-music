@@ -16,7 +16,7 @@ export interface SaavnItem {
   title: string;
   subTitle: string;
   image: SaavnImage[] | string; // Sometimes string (playlist), sometimes array (song/album)
-  type: 'song' | 'album' | 'playlist' | 'radio_station' | 'channel' | 'artist' | 'occasion';
+  type: 'song' | 'album' | 'playlist' | 'radio_station' | 'channel' | 'artist' | 'occasion' | 'radio';
   token: string;
   playCount?: string;
   releaseDate?: string;

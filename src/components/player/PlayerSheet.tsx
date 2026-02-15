@@ -16,6 +16,7 @@ import { Text } from '../common/Text';
 import { AudioProRepeatMode } from 'react-native-audio-pro';
 import { formatTime, useTrackProgress } from '../../hooks/useTrackProgress';
 import { useLibraryStore } from '../../store/useLibraryStore';
+import { fontNames } from '../../theme/tokens';
 import { EqualizerSheet } from './EqualizerSheet';
 import { QueueSheet } from './QueueSheet';
 
@@ -37,8 +38,9 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
     justifyContent: 'center',
   },
   headerText: {
+    fontFamily: fontNames.bold,
     color: 'rgba(255, 255, 255, 0.6)',
-    fontSize: 14,
+    fontSize: s.mScale(14),
     letterSpacing: 2,
     textTransform: 'uppercase',
   },
@@ -131,18 +133,18 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
   },
   // Pre-computed text styles (no more inline objects)
   trackTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 6,
+    fontFamily: fontNames.bold,
+    fontSize: s.mScale(28),
+    marginBottom: s.mScale(6),
     letterSpacing: -0.5,
   },
   trackArtist: {
-    fontSize: 18,
-    fontWeight: '500',
+    fontFamily: fontNames.medium,
+    fontSize: s.mScale(18),
   },
   timeText: {
-    fontSize: 13,
-    fontWeight: '500',
+    fontFamily: fontNames.medium,
+    fontSize: s.mScale(13),
   },
 }));
 

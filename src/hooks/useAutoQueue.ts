@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { AudioPro, useAudioPro } from 'react-native-audio-pro';
-import { baseURL, MUSIC_RECOMMEND } from '../services/api/endpoints';
+import { baseURL, MUSIC_RADIO_PLAY, MUSIC_RECOMMEND } from '../services/api/endpoints';
+import { saavnApi } from '../services/api/saavnApi';
 import { audioService } from '../services/audio/AudioService';
 import { usePlayerStore } from '../store/usePlayerStore';
 import { useUserSettings } from '../store/useUserSettings';
@@ -8,15 +9,7 @@ import { mapSongToTrack } from '../utils/trackMapping';
 
 /**
  * Auto-Queue Hook
- * 
- * Automatically fetches and adds recommended songs to the queue when nearing the end,
- * creating an infinite radio-like experience.
- * 
- * Features:
- * - Triggers when current index is 3rd-to-last in queue (or immediately for single-song queues)
- * - Uses new /recommend endpoint for better recommendations
- * - Prevents duplicate songs from being added
- * - Works seamlessly with shuffle and repeat modes
+ * ...
  */
 
 const FETCH_LIMIT = 20; // Number of recommended songs to add
@@ -44,9 +37,14 @@ export const useAutoQueue = () => {
   const fetchMoreTracks = async (track: any): Promise<number> => {
     try {
       let apiUrl = '';
-      let isRadio = !!radioId;
+      let isRadio = !!radioId; // If unified, radioId is the session ID
 
-      if (isRadio) {
+      if (isRadio && radioProvider === 'unified') {
+        console.log(`📻 Auto-Queue: Fetching next unified batch for "${radioId}", Next: ${radioNextBatchRef.current}`);
+        apiUrl = `${MUSIC_RADIO_PLAY(radioId!)}?count=${FETCH_LIMIT}&next=${radioNextBatchRef.current}`;
+        if (radioLanguage) apiUrl += `&lang=${encodeURIComponent(radioLanguage)}`;
+      } else if (isRadio) {
+        // Legacy fallback
         console.log(`📻 Auto-Queue: Fetching next radio batch for "${radioId}" [${radioProvider}], Type: ${radioType}, Next: ${radioNextBatchRef.current}`);
         apiUrl = `${baseURL}/music/radio/${radioId}?provider=${radioProvider}`;
         if (radioLanguage) apiUrl += `&lang=${radioLanguage}`;
@@ -55,10 +53,49 @@ export const useAutoQueue = () => {
           apiUrl += `&next=${radioNextBatchRef.current}`;
         }
       } else {
+        // -----------------------------------------------------------------------
+        // TRANSFORM TO RADIO MODE
+        // Instead of simple recommendations, start a persistent Song Radio
+        // -----------------------------------------------------------------------
         const provider = track.provider || 'saavn';
-        const trackTitle = track.title || 'Unknown Title';
-        apiUrl = `${MUSIC_RECOMMEND(track.id)}&provider=${provider}`;
-        console.log(`🔍 Auto-Queue: Fetching recommendations for "${trackTitle}" [${track.id}] [${provider}]`);
+        console.log(`✨ Auto-Queue: Converting to Song Radio for "${track.title}" [${track.id}]`);
+
+        try {
+          // 1. Initialize Radio Session
+          const sessionData = await saavnApi.initRadioSession(
+            track.id,
+            'song',
+            provider as any,
+            undefined, // name
+            track.language
+          );
+
+          if (sessionData.status === 'success' && sessionData.data?.stationId) {
+            const newStationId = sessionData.data.stationId;
+            console.log(`📻 Auto-Queue: Created station ${newStationId}. transitioning to Radio Mode.`);
+
+            // 2. Update Store to Radio Mode (without clearing queue)
+            usePlayerStore.getState().setRadio(newStationId, 'unified', track.language || 'hindi,english', 'song');
+
+            // 3. Update local Ref so we don't re-init immediately
+            radioNextBatchRef.current = 1;
+
+            // 4. Fetch the first batch from this new station
+            // We recursively call fetchMoreTracks? No, let's just construct the URL here.
+            apiUrl = `${MUSIC_RADIO_PLAY(newStationId)}?count=${FETCH_LIMIT}&next=1`;
+            if (track.language) apiUrl += `&lang=${encodeURIComponent(track.language)}`;
+
+            // IMPORTANT: Update local isRadio flag for the logging below?
+            // Actually, we can just proceed with `apiUrl`.
+          } else {
+            // Fallback to old recommend if radio creation fails
+            console.warn('⚠️ Auto-Queue: Radio creation failed, falling back to recommend');
+            apiUrl = `${MUSIC_RECOMMEND(track.id)}&provider=${provider}`;
+          }
+        } catch (e) {
+          console.error('⚠️ Auto-Queue: Radio init error', e);
+          apiUrl = `${MUSIC_RECOMMEND(track.id)}&provider=${provider}`;
+        }
       }
 
       console.log(`📡 Auto-Queue API Call:`, apiUrl);

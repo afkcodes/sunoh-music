@@ -5,6 +5,7 @@ import { decodeHtmlEntities } from './htmlDecode';
 export type ExtendedTrack = AudioProTrack & {
   source: string;
   provider: string;
+  language?: string;
   fullData?: Song;
 };
 
@@ -48,6 +49,7 @@ export const mapSongToTrack = (song: Song): ExtendedTrack => {
     // Include source for URL refresh strategy (Gaana URLs expire)
     source: provider,
     provider: provider,
+    language: song.language,
     fullData: song,
   };
 };

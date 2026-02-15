@@ -19,6 +19,8 @@ export const MUSIC_RADIO_DETAIL = (radioId: string) => `${baseURL}/music/radio/$
 export const MUSIC_ARTIST_RADIO = (artistId: string) => `${baseURL}/music/artist/${artistId}/radio`;
 export const MUSIC_RECOMMEND = (id: string) => `${baseURL}/music/recommend?songId=${id}`;
 export const MUSIC_RECOMMEND_SEARCH = (query: string) => `${baseURL}/music/recommend?q=${query}`;
+export const MUSIC_RADIO_SESSION = `${baseURL}/music/radio/session`;
+export const MUSIC_RADIO_PLAY = (sessionId: string) => `${baseURL}/music/radio/${sessionId}`;
 
 // Lyrics Endpoints
 export const LYRICS_GET = (songName: string) => `${baseURL}/lyrics/${songName}`;

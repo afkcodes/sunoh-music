@@ -9,6 +9,7 @@ import { useArtworkTheme } from '../../hooks/useArtworkTheme';
 import { useTrackProgress } from '../../hooks/useTrackProgress';
 import { usePlayer } from '../../store/usePlayerStore';
 import { useTheme } from '../../theme/ThemeContext';
+import { fontNames } from '../../theme/tokens';
 import { AppTheme } from '../../theme/types';
 import { makeScalingStyles, useScalingStyles } from '../../utils/style.util';
 import { Pause, Play, SkipNext, SkipPrevious } from '../common/SolarIcons.generated';
@@ -64,8 +65,8 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
     alignItems: 'center',
   },
   title: {
-    fontWeight: '700',
-    fontSize: 16,
+    fontFamily: fontNames.bold,
+    fontSize: s.mScale(16),
   },
   subtitle: {
     fontWeight: '500',

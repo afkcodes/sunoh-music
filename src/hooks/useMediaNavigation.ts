@@ -1,7 +1,8 @@
 import { useNavigationEvent } from 'navigation-react';
 import { useCallback } from 'react';
 import { Routes } from '../app/navigation/routes';
-import { baseURL, MUSIC_SONG } from '../services/api/endpoints';
+import { MUSIC_SONG } from '../services/api/endpoints';
+import { saavnApi } from '../services/api/saavnApi';
 import { usePlayer, usePlayerStore } from '../store/usePlayerStore';
 import { SaavnItem } from '../types/saavn';
 import { getMediaItemProps } from '../utils/media';
@@ -75,60 +76,56 @@ export const useMediaNavigation = () => {
 
       case 'radio_station':
       case 'channel':
-        console.log('📻 MediaNav: Starting radio', { title: props.title, id: props.id, type: props.type, provider: props.provider });
+        console.log('📻 MediaNav: Starting unified radio session', { title: props.title, id: props.id, type: props.type, provider: props.provider });
         try {
-          const { setIsFetching, setRadio } = usePlayerStore.getState();
+          const { setIsFetching, setRadio, playQueue } = usePlayerStore.getState();
           setIsFetching(true);
 
-          // Clear existing queue and set new radio with language
-          setRadio(props.id, props.provider as any, props.language, props.stationType);
-          let url = `${baseURL}/music/radio/${props.id}?provider=${props.provider}`;
+          // 1. Initialize Radio Session
+          // Map internal types to API types if necessary
+          let radioType = 'song'; // default
+          if (props.stationType === 'artist') radioType = 'artist';
+          if (props.stationType === 'featured' || props.type === 'channel') radioType = 'featured';
 
-          if (props.stationType === "artist") {
-            url = `${baseURL}/music/radio/${props.title}?provider=${props.provider}`;
-          }
-          if (props.language) {
-            url += `&lang=${props.language}`;
-          }
-          if (props.stationType) {
-            url += `&type=${props.stationType}`;
-          }
-          console.log('📡 MediaNav: Fetching radio tracks from:', url);
+          const sessionData = await saavnApi.initRadioSession(
+            props.id,
+            radioType,
+            props.provider as any,
+            props.title, // Name used for featured stations
+            props.language
+          );
 
-          const response = await fetch(url);
-          const res = await response.json();
+          if (sessionData.status === 'success' && sessionData.data?.stationId) {
+            const stationId = sessionData.data.stationId;
+            console.log(`📡 MediaNav: Session initialized. Station ID: ${stationId}`);
 
-          console.log('📦 MediaNav: Radio response received:', {
-            status: res.status,
-            hasData: !!res.data,
-            itemsCount: Array.isArray(res.data) ? res.data.length : (res.data?.list?.length || 0)
-          });
+            // 2. Fetch Initial Songs
+            const songsData = await saavnApi.fetchRadioSongs(stationId, 20, 1, props.language);
 
-          if (res.status === 'success' && res.data) {
-            const tracks = Array.isArray(res.data)
-              ? res.data.map(mapSongToTrack)
-              : (res.data.list || []).map(mapSongToTrack);
+            if (songsData.status === 'success' && songsData.data) {
+              const tracks = Array.isArray(songsData.data)
+                ? songsData.data.map(mapSongToTrack)
+                : (songsData.data.list || []).map(mapSongToTrack);
 
-            const realStationId = res.data.stationId || props.id;
-            console.log(`🎵 MediaNav: Mapping complete. Derived ${tracks.length} tracks. Real Station ID: ${realStationId}, Language: ${props.language}`);
+              console.log(`🎵 MediaNav: Received ${tracks.length} tracks.`);
 
-            if (tracks.length > 0) {
-              // Update with real station ID from backend and keep language
-              setRadio(realStationId, props.provider as any, props.language, props.stationType);
-
-              const { playQueue } = usePlayerStore.getState();
-              playQueue(tracks, 0, true);
+              if (tracks.length > 0) {
+                // 3. Update Store & Play
+                setRadio(stationId, 'unified', props.language, radioType);
+                playQueue(tracks, 0, true);
+              } else {
+                console.warn('⚠️ MediaNav: Radio station returned 0 tracks');
+              }
             } else {
-              console.warn('⚠️ MediaNav: Radio station returned 0 tracks');
+              console.error('❌ MediaNav: Failed to fetch radio songs', songsData.message);
             }
           } else {
-            console.error('❌ MediaNav: Radio fetch failed or returned no data', res.message || 'No message');
+            console.error('❌ MediaNav: Failed to init radio session', sessionData.message);
           }
         } catch (error) {
           console.error('💥 MediaNav: Error playing radio:', error);
         } finally {
           usePlayerStore.getState().setIsFetching(false);
-          console.log('🔄 MediaNav: Radio loading state cleared');
         }
         break;
       // Add more cases here as needed (artist, radio, etc.)

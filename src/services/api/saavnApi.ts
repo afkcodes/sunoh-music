@@ -1,16 +1,18 @@
 import { AlbumResponse } from '../../types/album';
 import { SaavnResponse } from '../../types/saavn';
 import {
-    MUSIC_ALBUM,
-    MUSIC_ARTIST,
-    MUSIC_HOME,
-    MUSIC_LANGUAGES,
-    MUSIC_OCCASIONS,
-    MUSIC_OCCASIONS_DETAIL,
-    MUSIC_PLAYLIST,
-    MUSIC_SEARCH,
-    MUSIC_SONG,
-    MUSIC_SONG_STREAM
+  MUSIC_ALBUM,
+  MUSIC_ARTIST,
+  MUSIC_HOME,
+  MUSIC_LANGUAGES,
+  MUSIC_OCCASIONS,
+  MUSIC_OCCASIONS_DETAIL,
+  MUSIC_PLAYLIST,
+  MUSIC_RADIO_PLAY,
+  MUSIC_RADIO_SESSION,
+  MUSIC_SEARCH,
+  MUSIC_SONG,
+  MUSIC_SONG_STREAM
 } from './endpoints';
 
 export type MusicProvider = 'gaana' | 'saavn' | 'spotify' | 'unified';
@@ -189,7 +191,7 @@ export const saavnApi = {
       throw error;
     }
   },
-  
+
   fetchLanguages: async (): Promise<any> => {
     try {
       const response = await fetch(MUSIC_LANGUAGES);
@@ -199,6 +201,62 @@ export const saavnApi = {
       return await response.json();
     } catch (error) {
       console.error('Failed to fetch languages:', error);
+      throw error;
+    }
+  },
+
+  initRadioSession: async (
+    id: string,
+    type: string = 'song',
+    provider: MusicProvider = 'saavn',
+    name?: string,
+    lang?: string
+  ): Promise<any> => {
+    try {
+      let url = `${MUSIC_RADIO_SESSION}?id=${encodeURIComponent(id)}&type=${encodeURIComponent(
+        type
+      )}&provider=${encodeURIComponent(provider)}`;
+
+      if (name) {
+        url += `&name=${encodeURIComponent(name)}`;
+      }
+
+      if (lang) {
+        url += `&lang=${encodeURIComponent(lang)}`;
+      }
+
+      console.log('📡 initRadioSession:', url);
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to init radio session:', error);
+      throw error;
+    }
+  },
+
+  fetchRadioSongs: async (
+    sessionId: string,
+    count: number = 20,
+    next: number = 1,
+    lang?: string
+  ): Promise<any> => {
+    try {
+      let url = `${MUSIC_RADIO_PLAY(sessionId)}?count=${count}&next=${next}`;
+      if (lang) {
+        url += `&lang=${encodeURIComponent(lang)}`;
+      }
+      console.log('📡 fetchRadioSongs:', url);
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to fetch radio songs:', error);
       throw error;
     }
   },

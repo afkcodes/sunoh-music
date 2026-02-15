@@ -71,7 +71,9 @@ export function getMediaItemProps(
     }
   ) || '';
 
-  const isCircle = ['radio_station', 'artist'].includes(itemType);
+  const isCircle =
+    ['radio', 'radio_station', 'artist'].includes(itemType) ||
+    (typeof itemType === 'string' && itemType.toLowerCase().includes('radio'));
   const providerCandidate = item.source || item.provider || sectionProvider || 'saavn';
   const provider = (providerCandidate === 'unified' ? 'saavn' : providerCandidate) as MediaItemProps['provider'];
 
