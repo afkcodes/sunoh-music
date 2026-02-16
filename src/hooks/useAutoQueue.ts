@@ -21,7 +21,7 @@ interface RecommendResponse {
 }
 
 export const useAutoQueue = () => {
-  const { queue, radioId, radioProvider, radioLanguage, radioType } = usePlayerStore();
+  const { queue, radioId, radioType } = usePlayerStore();
   const { autoQueueEnabled: enabled, autoQueueThreshold: threshold } = useUserSettings();
   const isFetchingRef = useRef(false);
   const lastFetchedSongIdRef = useRef<string | null>(null);
@@ -36,20 +36,21 @@ export const useAutoQueue = () => {
    */
   const fetchMoreTracks = async (track: any): Promise<number> => {
     try {
+      const { radioId: currentRadioId, radioProvider: currentRadioProvider, radioLanguage: currentRadioLanguage } = usePlayerStore.getState();
       let apiUrl = '';
-      let isRadio = !!radioId; // If unified, radioId is the session ID
+      let isRadio = !!currentRadioId; // Use latest from store
 
-      if (isRadio && radioProvider === 'unified') {
-        console.log(`📻 Auto-Queue: Fetching next unified batch for "${radioId}", Next: ${radioNextBatchRef.current}`);
-        apiUrl = `${MUSIC_RADIO_PLAY(radioId!)}?count=${FETCH_LIMIT}&next=${radioNextBatchRef.current}`;
-        if (radioLanguage) apiUrl += `&lang=${encodeURIComponent(radioLanguage)}`;
+      if (isRadio && currentRadioProvider === 'unified') {
+        console.log(`📻 Auto-Queue: Fetching next unified batch for "${currentRadioId}", Next: ${radioNextBatchRef.current}`);
+        apiUrl = `${MUSIC_RADIO_PLAY(currentRadioId!)}?count=${FETCH_LIMIT}&next=${radioNextBatchRef.current}`;
+        if (currentRadioLanguage) apiUrl += `&lang=${encodeURIComponent(currentRadioLanguage)}`;
       } else if (isRadio) {
         // Legacy fallback
-        console.log(`📻 Auto-Queue: Fetching next radio batch for "${radioId}" [${radioProvider}], Type: ${radioType}, Next: ${radioNextBatchRef.current}`);
-        apiUrl = `${baseURL}/music/radio/${radioId}?provider=${radioProvider}`;
-        if (radioLanguage) apiUrl += `&lang=${radioLanguage}`;
+        console.log(`📻 Auto-Queue: Fetching next radio batch for "${currentRadioId}" [${currentRadioProvider}], Type: ${radioType}, Next: ${radioNextBatchRef.current}`);
+        apiUrl = `${baseURL}/music/radio/${currentRadioId}?provider=${currentRadioProvider}`;
+        if (currentRadioLanguage) apiUrl += `&lang=${currentRadioLanguage}`;
         if (radioType) apiUrl += `&type=${radioType}`;
-        if (radioProvider === 'saavn' || radioProvider === 'unified') {
+        if (currentRadioProvider === 'saavn' || currentRadioProvider === 'unified') {
           apiUrl += `&next=${radioNextBatchRef.current}`;
         }
       } else {
@@ -106,6 +107,7 @@ export const useAutoQueue = () => {
       console.log(`📦 Auto-Queue API Response:`, {
         status: data.status,
         tracksCount: (data.data as any)?.list?.length || data.data?.length || 0,
+        raw: data.data
       });
 
       if (data.status === 'success' && data.data) {
@@ -117,11 +119,17 @@ export const useAutoQueue = () => {
         }
 
         const currentQueueIds = new Set(queue.map((t) => t.id));
+        let duplicateCount = 0;
 
         const newSongs = rawTracks
           .filter((song: any) => {
-            const isDuplicate = currentQueueIds.has(song.id) || addedSongIdsRef.current.has(song.id);
-            if (!isDuplicate) {
+            const isQueueDuplicate = currentQueueIds.has(song.id);
+            const isAddedDuplicate = addedSongIdsRef.current.has(song.id);
+            const isDuplicate = isQueueDuplicate || isAddedDuplicate;
+
+            if (isDuplicate) {
+              duplicateCount++;
+            } else {
               addedSongIdsRef.current.add(song.id);
             }
             return !isDuplicate;
@@ -129,21 +137,32 @@ export const useAutoQueue = () => {
           .slice(0, FETCH_LIMIT)
           .map(mapSongToTrack);
 
-        if (newSongs.length > 0) {
-          console.log(`✅ Adding ${newSongs.length} tracks`);
-          audioService.addMediaItems(newSongs);
-          usePlayerStore.getState().syncQueue();
+        console.log(`📡 Auto-Queue: Response processed. New: ${newSongs.length}, Duplicates: ${duplicateCount} (Queue: ${currentQueueIds.size})`);
 
-          if (isRadio && (radioProvider === 'saavn' || radioProvider === 'unified')) {
+        const latestStore = usePlayerStore.getState();
+        const effectiveRadioId = latestStore.radioId;
+        const effectiveProvider = latestStore.radioProvider;
+
+        if (newSongs.length > 0) {
+          console.log(`✅ Auto-Queue: Adding ${newSongs.length} tracks`);
+          audioService.addMediaItems(newSongs);
+
+          // Delay sync slightly to allow native layer to update
+          setTimeout(() => {
+            latestStore.syncQueue();
+          }, 300);
+
+          if (effectiveRadioId && (effectiveProvider === 'saavn' || effectiveProvider === 'unified')) {
             radioNextBatchRef.current += 1;
+            console.log(`📻 Auto-Queue: Next batch will be ${radioNextBatchRef.current}`);
           }
 
           return newSongs.length;
         } else {
-          console.log(`⚠️  All fetched tracks were duplicates`);
-          // If all duplicates and it's Saavn/Unified radio, maybe try next page immediately?
-          if (isRadio && (radioProvider === 'saavn' || radioProvider === 'unified')) {
+          console.log(`⚠️ Auto-Queue: All tracks were duplicates. Current Batch: ${radioNextBatchRef.current}`);
+          if (effectiveRadioId && (effectiveProvider === 'saavn' || effectiveProvider === 'unified')) {
             radioNextBatchRef.current += 1;
+            console.log(`📻 Auto-Queue: Retrying with next batch: ${radioNextBatchRef.current}`);
             return fetchMoreTracks(track);
           }
         }
@@ -179,30 +198,39 @@ export const useAutoQueue = () => {
       if (shouldFetch) {
         // Don't fetch if already fetched for this song (ignoring for Radio mode as we want multiple batches)
         if (!radioId && lastFetchedSongIdRef.current === currentTrack.id) {
+          console.log(`🎵 Auto-Queue: Skipping - already fetched for ${currentTrack.title}`);
           return;
         }
 
-        console.log(`🎵 Auto-Queue: TRIGGERED [${radioId ? 'Radio: ' + radioId : 'Recommendations'}]`);
-        console.log(`🎵 Auto-Queue: Remaining: ${remainingSongs}, Current Song: ${currentTrack.title || 'Unknown'}`);
+        console.log(`🎵 Auto-Queue: TRIGGERED`, {
+          mode: radioId ? 'Radio' : 'Recommendations',
+          radioId,
+          remainingSongs,
+          threshold,
+          currentSong: currentTrack.title
+        });
 
         isFetchingRef.current = true;
         lastFetchedSongIdRef.current = currentTrack.id;
 
         try {
           const songsAdded = await fetchMoreTracks(currentTrack);
-          if (songsAdded > 0) {
-            console.log(`🎵 Auto-Queue: ✅ SUCCESS - Added ${songsAdded} tracks`);
-          }
+          console.log(`🎵 Auto-Queue: API Result - Added ${songsAdded} tracks`);
         } catch (error) {
-          console.error('🎵 Auto-Queue: 💥 Error:', error);
+          console.error('🎵 Auto-Queue: 💥 Error in checkAndFetchSimilar:', error);
         } finally {
           isFetchingRef.current = false;
+        }
+      } else {
+        // Debug log for why it DIDN'T trigger
+        if (remainingSongs % 5 === 0 || remainingSongs <= 10) {
+          console.log(`🎵 Auto-Queue: Waiting... (${remainingSongs} remaining, threshold ${threshold})`);
         }
       }
     };
 
     checkAndFetchSimilar();
-  }, [currentTrack, queue, enabled, threshold]);
+  }, [currentTrack, queue, enabled, threshold, radioId]); // Added radioId as dependency
 
   useEffect(() => {
     radioNextBatchRef.current = 1;
