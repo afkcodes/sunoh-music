@@ -8,7 +8,7 @@
 import { LegendList } from '@legendapp/list';
 import { useNavigationEvent } from 'navigation-react';
 import React, { useCallback, useMemo } from 'react';
-import { ActivityIndicator, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, ScrollView, useWindowDimensions, View } from 'react-native';
 import { MediaCard } from '../components/common/MediaCard';
 import { SafeView } from '../components/common/SafeView';
 import { Text } from '../components/common/Text';
@@ -57,26 +57,44 @@ export const SectionDetailScreen: React.FC = () => {
   const { data: navData } = useNavigationEvent();
   const { navigateToItem } = useMediaNavigation();
 
-  const sectionTitle = navData.title as string;
-  const sectionId = navData.sectionId as string;
-  const sectionProvider = navData.provider as any;
-  const isOccasion = !!navData.isOccasion;
+  const sectionTitle = (navData.title as string) || 'Details';
+  const sectionId = (navData.sectionId as any)?.toString();
+  const sectionProvider = (navData.provider as any) || 'saavn';
+  // Check both boolean and string "true"
+  const isOccasion = navData.isOccasion === true || navData.isOccasion === 'true';
 
-  const { data: occasionData, isLoading } = useOccasionDetails(
+  console.log('📱 SectionDetail: Mounted', { sectionId, sectionProvider, isOccasion, sectionTitle });
+
+  const { data: occasionData, isLoading, error } = useOccasionDetails(
     sectionId,
     sectionProvider,
     isOccasion
   );
 
   const sectionData = useMemo(() => {
-    if (isOccasion) {
-      if (!occasionData) return [];
-      // Gaana returns raw array or { data: [] }
-      if (Array.isArray(occasionData)) return occasionData;
-      if (Array.isArray(occasionData.data)) return occasionData.data;
-      return [];
+    if (!isOccasion) {
+      return sectionDataStore.getData(sectionId) || [];
     }
-    return sectionDataStore.getData(sectionId) || [];
+
+    if (!occasionData) return [];
+
+    console.log('📦 SectionDetail: Parsing Occasion Data', {
+      hasStatus: !!(occasionData as any).status,
+      hasData: !!(occasionData as any).data,
+      isRawArray: Array.isArray(occasionData)
+    });
+
+    // Strategy 1: Saavn provider usually wraps in { status: 'success', data: [...] }
+    const resData = (occasionData as any).data;
+    if (Array.isArray(resData)) return resData;
+
+    // Strategy 2: Gaana or raw array response
+    if (Array.isArray(occasionData)) return occasionData;
+
+    // Strategy 3: Nested data { data: { data: [...] } }
+    if (resData && Array.isArray((resData as any).data)) return (resData as any).data;
+
+    return [];
   }, [sectionId, isOccasion, occasionData]);
 
   const { width } = useWindowDimensions();
@@ -118,45 +136,68 @@ export const SectionDetailScreen: React.FC = () => {
 
   // If the API returns categorized sections (common in Occasions details)
   const isCategorized = useMemo(() => {
-    if (!isOccasion || !occasionData) return false;
-    // Check if what we got is an array of sections (heading + data)
-    const data = Array.isArray(occasionData) ? occasionData : occasionData.data;
-    if (Array.isArray(data) && data.length > 0 && data[0].heading && data[0].data) {
-      return true;
-    }
-    return false;
-  }, [isOccasion, occasionData]);
+    if (!isOccasion || sectionData.length === 0) return false;
+
+    const first = sectionData[0];
+    // A section usually has a heading/title AND a data array
+    const detected = !!(first && (first.heading || first.title) && Array.isArray(first.data));
+
+    // Fallback: if it's an occasion and EVERY item has a data array, it's categorized
+    const alternateDetected = detected || (sectionData.length > 0 && sectionData.every((item: any) => Array.isArray(item.data)));
+
+    console.log('📂 SectionDetail: Categorization check', {
+      isCategorized: detected || alternateDetected,
+      detected,
+      alternateDetected,
+      firstItemHeading: first?.heading || first?.title
+    });
+    return detected || alternateDetected;
+  }, [isOccasion, sectionData]);
 
   const renderContent = () => {
     if (isLoading) {
       return (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator color={colors.primaryBase} />
+          <ActivityIndicator color={colors.primaryBase} size="large" />
+        </View>
+      );
+    }
+
+    if (error) {
+      return (
+        <View style={styles.loadingContainer}>
+          <Text variant="body" color="secondary">Failed to load: {(error as Error).message}</Text>
+        </View>
+      );
+    }
+
+    if (sectionData.length === 0) {
+      return (
+        <View style={styles.loadingContainer}>
+          <Text variant="body" color="secondary">No content found</Text>
         </View>
       );
     }
 
     if (isCategorized) {
-      const sections = Array.isArray(occasionData) ? occasionData : (occasionData as any).data;
+      // Use standard ScrollView for categorized data as it's typically short
+      // and nested LegendLists/FlatLists can sometimes be flaky on Android
       return (
-        <LegendList
-          data={sections}
-          renderItem={({ item: section }: { item: any }) => (
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: 100 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {sectionData.map((section: any, idx: number) => (
             <HomeSection
-              title={section.heading}
+              key={(section.heading || section.title || 'section') + idx}
+              title={section.heading || section.title}
               data={section.data}
               provider={sectionProvider}
               style={{ marginBottom: 24 }}
             />
-          )}
-          keyExtractor={(item, index) => (item.heading || 'section') + index}
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 100 }}
-          showsVerticalScrollIndicator={false}
-          estimatedItemSize={250}
-          renderToHardwareTextureAndroid
-          recycleItems
-        />
+          ))}
+        </ScrollView>
       );
     }
 
@@ -164,7 +205,7 @@ export const SectionDetailScreen: React.FC = () => {
       <LegendList
         data={sectionData}
         renderItem={renderItem}
-        keyExtractor={(item) => (item.id || (item as any).url || Math.random().toString())}
+        keyExtractor={(item, index) => (item.id || (item as any).url || `item-${index}`)}
         style={{ flex: 1 }}
         contentContainerStyle={styles.listContent}
         numColumns={NUM_COLUMNS}
@@ -182,7 +223,7 @@ export const SectionDetailScreen: React.FC = () => {
         <Text variant="h2" color="primary">
           {sectionTitle}
         </Text>
-        {!isCategorized && (
+        {!isCategorized && sectionData.length > 0 && (
           <Text variant="caption" color="secondary" style={{ marginTop: 4 }}>
             {sectionData.length} items
           </Text>

@@ -76,9 +76,14 @@ export const useMediaNavigation = () => {
 
       case 'occasion':
       case 'channel':
-        console.log('📂 MediaNav: Navigating to channel/occasion details', { title: props.title, id: props.id });
+        console.log(`📂 MediaNav: Navigating to ${props.type} details`, {
+          title: props.title,
+          id: props.id,
+          token: props.token,
+          provider: props.provider
+        });
         stateNavigator.navigate(Routes.SectionDetail, {
-          sectionId: props.id, // token/id of the channel
+          sectionId: props.id || props.token, // token/id of the channel
           title: props.title,
           provider: props.provider,
           isOccasion: true,
