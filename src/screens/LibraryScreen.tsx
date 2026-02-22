@@ -7,7 +7,6 @@ import TurboImage from 'react-native-turbo-image';
 import { Routes } from '../app/navigation/routes';
 import { Button, SafeView, Text } from '../components/common';
 import {
-  AddSquare,
   AltArrowDown,
   BillList,
   CloseCircle,
@@ -21,6 +20,7 @@ import {
 } from '../components/common/SolarIcons.generated';
 import { LibraryItem as LibraryItemType, useLibraryStore } from '../store/useLibraryStore';
 import { usePlayer } from '../store/usePlayerStore';
+import { useTabStore } from '../store/useTabStore';
 import { borderRadius, fontNames, spacing, ThemeColors } from '../theme';
 import { useTheme } from '../theme/ThemeContext';
 import { getMediaItemProps } from '../utils/media';
@@ -309,6 +309,7 @@ export const LibraryScreen = () => {
   const s = useScaling();
   const { stateNavigator } = useNavigationEvent();
   const { playQueue } = usePlayer();
+  const { setTabIndex } = useTabStore();
 
   // Use a ref to always have the latest navigator available to the stable callback
   const navRef = useRef(stateNavigator);
@@ -444,9 +445,9 @@ export const LibraryScreen = () => {
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Your Collection</Text>
-        <Pressable hitSlop={10}>
+        {/* <Pressable hitSlop={10}>
           <AddSquare size={s.mScale(26)} color={colors.textPrimary} />
-        </Pressable>
+        </Pressable> */}
       </View>
 
       <ScrollView
@@ -490,7 +491,7 @@ export const LibraryScreen = () => {
       <MusicNote size={s.mScale(60)} color={colors.textTertiary} />
       <Text style={{ marginTop: s.mScale(20), color: colors.textSecondary }}>No items found in your library</Text>
       <Button
-        onPress={() => navRef.current.navigate(Routes.Home)}
+        onPress={() => setTabIndex(0)}
         variant="primary"
         style={{ marginTop: s.mScale(20), paddingHorizontal: s.mScale(32) }}
       >

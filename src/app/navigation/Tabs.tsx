@@ -3,6 +3,7 @@ import { NavigationStack, Scene, TabBar, TabBarItem } from 'navigation-react-nat
 import React from 'react';
 import { useArtworkTheme } from '../../hooks/useArtworkTheme';
 import { usePlayer } from '../../store/usePlayerStore';
+import { useTabStore } from '../../store/useTabStore';
 import { useTheme } from '../../theme/ThemeContext';
 import { homeNavigator, libraryNavigator, searchNavigator } from './navigators';
 import { Routes } from './routes';
@@ -28,6 +29,7 @@ const LibraryIcon = require('../../assets/images/library.png');
 export const Tabs = () => {
   const { colors } = useTheme();
   const { currentTrack } = usePlayer();
+  const { tabIndex, setTabIndex } = useTabStore();
   const { playerTheme, gradientColors } = useArtworkTheme(currentTrack?.artwork);
 
   // Dynamic colors based on artwork, falling back to theme colors
@@ -44,6 +46,8 @@ export const Tabs = () => {
       activeIndicatorColor={activeIndicatorColor}
       unselectedTintColor={colors.textSecondary as string}
       labelVisibilityMode="labeled"
+      tab={tabIndex}
+      onChangeTab={setTabIndex}
       preventFouc
       scrollsToTop
 
