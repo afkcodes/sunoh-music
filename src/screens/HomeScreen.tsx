@@ -89,7 +89,7 @@ const HomeScreen = () => {
                     onCastPress={() => AudioPro.showCastDialog()}
                 />
 
-                {recentlyPlayed.length > 0 && (
+                {recentlyPlayed.length >= 4 && (
                     <HomeHistorySection
                         data={recentlyPlayed.map(r => ({ ...r.item, provider: r.provider === 'unified' ? undefined : r.provider }))}
                     />
