@@ -1,4 +1,4 @@
-import analytics from '@react-native-firebase/analytics';
+import { getAnalytics, logEvent, logScreenView, logSearch } from '@react-native-firebase/analytics';
 
 /**
  * Standardize analytics events across the app.
@@ -6,7 +6,7 @@ import analytics from '@react-native-firebase/analytics';
 class AnalyticsService {
   async logScreenView(screenName: string, screenClass?: string) {
     try {
-      await analytics().logScreenView({
+      await logScreenView(getAnalytics(), {
         screen_name: screenName,
         screen_class: screenClass || screenName,
       });
@@ -23,7 +23,7 @@ class AnalyticsService {
     provider?: string;
   }) {
     try {
-      await analytics().logEvent('song_play', {
+      await logEvent(getAnalytics(), 'song_play', {
         item_id: songData.id,
         item_name: songData.title,
         artist_name: songData.artist || 'Unknown',
@@ -37,7 +37,7 @@ class AnalyticsService {
 
   async logSearch(query: string) {
     try {
-      await analytics().logSearch({ search_term: query });
+      await logSearch(getAnalytics(), { search_term: query });
       console.log(`📊 Analytics: Search [${query}]`);
     } catch (error) {
       console.log('📊 Analytics Error (Search):', error);
@@ -46,7 +46,7 @@ class AnalyticsService {
 
   async logCustomEvent(eventName: string, params?: Record<string, any>) {
     try {
-      await analytics().logEvent(eventName, params);
+      await logEvent(getAnalytics(), eventName, params);
       console.log(`📊 Analytics: Custom event [${eventName}]`, params);
     } catch (error) {
       console.log(`📊 Analytics Error (${eventName}):`, error);
