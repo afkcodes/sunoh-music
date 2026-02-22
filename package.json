@@ -14,6 +14,8 @@
     "@lodev09/react-native-true-sheet": "^3.8.2",
     "@react-native-assets/slider": "^11.0.12",
     "@react-native-community/slider": "^5.1.2",
+    "@react-native-firebase/analytics": "^23.8.6",
+    "@react-native-firebase/app": "^23.8.6",
     "@somesoap/react-native-image-palette": "^1.2.2",
     "@tanstack/react-query": "^5.90.20",
     "navigation": "^6.3.1",

@@ -1,4 +1,5 @@
 import { StateNavigator } from 'navigation';
+import { appAnalytics } from '../../services/analytics/AnalyticsService';
 import { Routes } from './routes';
 
 /**
@@ -50,3 +51,15 @@ export const searchNavigator = new StateNavigator([
   { key: Routes.SectionDetail, trackCrumbTrail: true },
   { key: Routes.Details, trackCrumbTrail: true },
 ]);
+
+const trackScreen = (_oldState: any, state: any) => {
+  if (state && state.key) {
+    appAnalytics.logScreenView(state.key);
+  }
+};
+
+rootNavigator.onNavigate(trackScreen);
+homeNavigator.onNavigate(trackScreen);
+libraryNavigator.onNavigate(trackScreen);
+searchNavigator.onNavigate(trackScreen);
+

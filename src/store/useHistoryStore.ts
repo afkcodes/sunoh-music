@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { appAnalytics } from '../services/analytics/AnalyticsService';
 import { SaavnItem } from '../types/saavn';
 import { mmkv } from './storage';
 
@@ -37,6 +38,14 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
     // Check if it's already in history
     const { recentlyPlayed } = get();
     const filteredHistory = recentlyPlayed.filter(i => i.item.id !== item.id);
+
+    // Track analytics play
+    appAnalytics.logSongPlay({
+      id: item.id || item.token || 'unknown',
+      title: item.title,
+      artist: item.subTitle,
+      provider: provider,
+    });
 
     // Add to the top
     const newHistory = [
