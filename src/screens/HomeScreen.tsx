@@ -9,8 +9,10 @@ import { Routes } from '../app/navigation/routes';
 import { SafeView } from '../components/common';
 import LogoAnimation from '../components/common/Loader';
 import { HomeHeader } from '../components/home/HomeHeader';
+import { HomeHistorySection } from '../components/home/HomeHistorySection';
 import { HomeSection } from '../components/home/HomeSection';
 import { useHomeData } from '../hooks/useHomeData';
+import { useHistoryStore } from '../store/useHistoryStore';
 import { usePlayerStore } from '../store/usePlayerStore';
 import { spacing, ThemeColors } from '../theme';
 
@@ -39,6 +41,7 @@ const HomeScreen = () => {
     const { data: homeData, isLoading, error } = useHomeData({ provider: 'unified' });
     const { stateNavigator } = useNavigationEvent();
     const castState = usePlayerStore((s) => s.castState);
+    const recentlyPlayed = useHistoryStore(s => s.recentlyPlayed);
 
     // State for incremental rendering
     const [visibleCount, setVisibleCount] = useState(INITIAL_RENDER_COUNT);
@@ -85,6 +88,12 @@ const HomeScreen = () => {
                     castState={castState}
                     onCastPress={() => AudioPro.showCastDialog()}
                 />
+
+                {recentlyPlayed.length > 0 && (
+                    <HomeHistorySection
+                        data={recentlyPlayed.map(r => ({ ...r.item, provider: r.provider === 'unified' ? undefined : r.provider }))}
+                    />
+                )}
 
                 {visibleData.map((section, index) => {
                     // Don't render last item if it was sliced off in original code,

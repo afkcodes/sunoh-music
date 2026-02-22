@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 import { Routes } from '../app/navigation/routes';
 import { MUSIC_SONG } from '../services/api/endpoints';
 import { saavnApi } from '../services/api/saavnApi';
+import { useHistoryStore } from '../store/useHistoryStore';
 import { usePlayer, usePlayerStore } from '../store/usePlayerStore';
 import { SaavnItem } from '../types/saavn';
 import { getMediaItemProps } from '../utils/media';
@@ -14,6 +15,9 @@ export const useMediaNavigation = () => {
 
   const navigateToItem = useCallback(async (item: SaavnItem, sectionProvider?: string) => {
     const props = getMediaItemProps(item, sectionProvider);
+
+    // Add to interaction history
+    useHistoryStore.getState().addToHistory(item, props.provider as any);
 
     switch (props.type) {
       case 'album':
