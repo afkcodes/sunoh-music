@@ -58,15 +58,10 @@ const trackScreen = (_oldState: any, state: any) => {
   }
 };
 
-// Remove listeners to prevent "Cannot add the same handler more than once" during Fast Refresh
-rootNavigator.offNavigate(trackScreen);
-homeNavigator.offNavigate(trackScreen);
-libraryNavigator.offNavigate(trackScreen);
-searchNavigator.offNavigate(trackScreen);
-
-// Add listeners
-rootNavigator.onNavigate(trackScreen);
-homeNavigator.onNavigate(trackScreen);
-libraryNavigator.onNavigate(trackScreen);
-searchNavigator.onNavigate(trackScreen);
-
+// Add listeners using separate function instances to prevent
+// "Cannot add the same handler more than once" errors from the navigation library,
+// which mutates the handler function to assign an internal ID.
+rootNavigator.onNavigate((o, s) => trackScreen(o, s));
+homeNavigator.onNavigate((o, s) => trackScreen(o, s));
+libraryNavigator.onNavigate((o, s) => trackScreen(o, s));
+searchNavigator.onNavigate((o, s) => trackScreen(o, s));
