@@ -4,7 +4,7 @@ import SquircleView from 'react-native-fast-squircle';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import TurboImage from 'react-native-turbo-image';
 import { useMediaNavigation } from '../../hooks/useMediaNavigation';
-import { borderRadius, springs, ThemeColors } from '../../theme';
+import { borderRadius, fontNames, springs, ThemeColors } from '../../theme';
 import { useTheme } from '../../theme/ThemeContext';
 import { getMediaItemProps } from '../../utils/media';
 import { makeScalingStyles, useScalingStyles } from '../../utils/style.util';
@@ -98,10 +98,10 @@ export const HomeHistoryCard = memo(({ item, width }: { item: any; width: number
                         )}
                     </SquircleView>
                     <View style={styles.textContainer}>
-                        <Text variant="body" style={{ fontWeight: '600', color: colors.textPrimary }} numberOfLines={1}>
+                        <Text variant="body" style={{ fontFamily: fontNames.semibold, color: colors.textPrimary }} numberOfLines={1}>
                             {props.title}
                         </Text>
-                        <Text variant="caption" style={{ color: colors.textSecondary }} numberOfLines={1}>
+                        <Text variant="caption" style={{ fontFamily: fontNames.medium, color: colors.textSecondary }} numberOfLines={1}>
                             {props.type.toUpperCase()}
                         </Text>
                     </View>

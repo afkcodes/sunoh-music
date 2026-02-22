@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { ScrollView, View, useWindowDimensions } from 'react-native';
-import { spacing } from '../../theme';
+import { fontNames, spacing } from '../../theme';
 import { useTheme } from '../../theme/ThemeContext';
 import { makeScalingStyles, useScalingStyles } from '../../utils/style.util';
 import { Text } from '../common/Text';
@@ -48,7 +48,7 @@ export const HomeHistorySection = ({ data }: { data: any[] }) => {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text variant="h3" style={{ fontWeight: '700' }}>Recently Played</Text>
+                <Text variant="h3" style={{ fontFamily: fontNames.semibold }}>Recently Played</Text>
             </View>
             <ScrollView
                 horizontal

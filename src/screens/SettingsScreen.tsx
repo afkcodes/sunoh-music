@@ -1,7 +1,7 @@
-import { useNavigationEvent } from 'navigation-react';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Linking,
   Pressable,
   ScrollView,
   TouchableOpacity,
@@ -10,7 +10,6 @@ import {
 import { AudioPro } from 'react-native-audio-pro';
 import SquircleView from 'react-native-fast-squircle';
 import Animated, { interpolateColor, useAnimatedStyle, useDerivedValue, withSpring } from 'react-native-reanimated';
-import { Routes } from '../app/navigation/routes';
 import { SafeView } from '../components/common/SafeView';
 import { Sheet, SheetRef } from '../components/common/Sheet';
 import {
@@ -21,10 +20,8 @@ import {
   HeartFill,
   InfoCircle,
   MusicNote,
-  Play,
   Restart,
   Share,
-  ShieldCheck,
   Soundwave,
   TrashBin2,
   UsersGroupRounded
@@ -276,7 +273,6 @@ const SettingsScreen = () => {
   const theme = useTheme();
   const { colors } = theme;
   const styles = useScalingStyles(createStyles, theme);
-  const { stateNavigator } = useNavigationEvent();
 
   const {
     languages: selectedLangs,
@@ -362,13 +358,13 @@ const SettingsScreen = () => {
               value={streamingQuality}
               onPress={() => openQualitySheet('streaming')}
             />
-            <SettingsItem
+            {/* <SettingsItem
               icon={<Play size={18} color={colors.primaryBase} />}
               label="Download Quality"
               value={downloadQuality}
               isLast
               onPress={() => openQualitySheet('download')}
-            />
+            /> */}
           </SquircleView>
         </View>
 
@@ -390,7 +386,7 @@ const SettingsScreen = () => {
               icon={<UsersGroupRounded size={18} color={colors.primaryBase} />}
               label="Join Community"
               isLast
-              onPress={() => { }}
+              onPress={() => Linking.openURL('https://t.me/+uVuFSUN4lp01M2Y1')}
             />
           </SquircleView>
         </View>
@@ -444,17 +440,17 @@ const SettingsScreen = () => {
               label="About Sunoh"
               onPress={() => { }}
             />
-            <SettingsItem
+            {/* <SettingsItem
               icon={<ShieldCheck size={18} color={colors.textSecondary} />}
               label="Privacy & Terms"
               isLast
               onPress={() => { }}
-            />
+            /> */}
           </SquircleView>
         </View>
 
         {/* Debug & Troubleshooting */}
-        <View style={styles.section}>
+        {/* <View style={styles.section}>
           <Text style={styles.sectionLabel}>Troubleshooting</Text>
           <SquircleView style={styles.itemsWrapper} cornerSmoothing={1}>
             <SettingsItem
@@ -464,7 +460,7 @@ const SettingsScreen = () => {
               isLast
             />
           </SquircleView>
-        </View>
+        </View> */}
 
         {/* Footer */}
         <View style={styles.footer}>
