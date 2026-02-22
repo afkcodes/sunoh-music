@@ -145,6 +145,7 @@ const SOLAR_ICONS = [
   'ticket',
   'undo-left',
   'lightbulb-bolt',
+  'screencast'
 ];
 
 // Icons from other icon sets (fallbacks for missing Solar icons)
@@ -163,6 +164,7 @@ const OTHER_ICONS = [
   { name: 'GripVertical', set: 'lucide', icon: 'grip-vertical' },
   // Filled heart variant (Solar bold)
   { name: 'HeartFill', set: 'solar', icon: 'heart-bold' },
+
 ];
 
 // Fetch SVG from Iconify API (Solar icons)

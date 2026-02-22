@@ -5,13 +5,11 @@
  * preset selection, and real-time audio adjustment.
  */
 
-import { Slider } from '@react-native-assets/slider';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { AudioPro } from 'react-native-audio-pro';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import { EQ_PRESETS, EQPreset, FREQUENCY_LABELS, PRESET_CATEGORIES } from '../../features/equalizer/eqPresets';
+import { CATEGORY_INFO, EQ_PRESETS, EQPreset, FREQUENCY_LABELS, PRESET_CATEGORIES } from '../../features/equalizer/eqPresets';
 import { mmkv } from '../../store/storage';
 import { useTheme } from '../../theme/ThemeContext';
 import { AppTheme } from '../../theme/types';
@@ -192,31 +190,45 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
   },
   categoryHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     paddingHorizontal: s.mScale(16),
     paddingVertical: s.mScale(12),
     backgroundColor: theme.colors.bgSurfaceHover + '40',
+    gap: s.mScale(12),
   },
-  categoryHeaderLeft: {
+  categoryTextContainer: {
+    flex: 1,
+  },
+  categoryTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: s.mScale(8),
+    gap: s.mScale(6),
+    marginBottom: s.mScale(2),
+  },
+  categoryIconContainer: {
+    width: s.mScale(24),
+    height: s.mScale(24),
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    marginTop: s.mScale(2),
   },
   categoryIndicator: {
-    width: s.mScale(16),
+    width: s.mScale(12),
     height: s.mScale(4),
     borderRadius: s.mScale(2),
     backgroundColor: theme.colors.primaryBase,
+    marginTop: s.mScale(10),
   },
   categoryTitle: {
     fontSize: s.font(14),
     fontWeight: '600',
+    flexShrink: 1,
   },
   categoryCount: {
-    fontSize: s.font(12),
-    opacity: 0.6,
-    marginLeft: s.mScale(4),
+    fontSize: s.font(11),
+    opacity: 0.5,
+    fontWeight: '500',
   },
   categoryContent: {
     padding: s.mScale(12),
@@ -340,9 +352,12 @@ export const EqualizerSheet = forwardRef<SheetRef, EqualizerSheetProps>((_, ref)
   const [activePreset, setActivePreset] = useState<string>('flat');
   const [isEnabled, setIsEnabled] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
-    signatures: true,
-    genres: true,
-    situational: false,
+    reference: true,
+    genres: false,
+    enhancement: false,
+    devices: false,
+    moods: false,
+    signature: false,
   });
 
   const sheetRef = React.useRef<SheetRef>(null);
@@ -434,35 +449,6 @@ export const EqualizerSheet = forwardRef<SheetRef, EqualizerSheetProps>((_, ref)
     }
   }, [isEnabled, applyEQ, barHeights]);
 
-  const handleGainChange = useCallback((index: number, value: number) => {
-    // Animate bar height in real-time
-    const heightPercent = ((Math.max(-12, Math.min(12, value)) + 12) / 24) * 100;
-    if (barHeights[index]) {
-      barHeights[index].value = Math.max(2, Math.min(98, heightPercent));
-    }
-
-    // Apply EQ in real-time for audio feedback
-    if (isEnabled) {
-      const tempGains = [...gains];
-      tempGains[index] = value;
-      applyEQ(tempGains);
-    }
-  }, [gains, isEnabled, applyEQ, barHeights]);
-
-  const handleGainComplete = useCallback((index: number, value: number) => {
-    const newGains = [...gains];
-    newGains[index] = value;
-    setGains(newGains);
-    setActivePreset('custom');
-
-    mmkv.set(STORAGE_KEYS.EQ_GAINS, JSON.stringify(newGains));
-    mmkv.set(STORAGE_KEYS.EQ_PRESET, 'custom');
-
-    if (isEnabled) {
-      applyEQ(newGains);
-    }
-  }, [gains, isEnabled, applyEQ]);
-
   const handleReset = useCallback(() => {
     const flatPreset = EQ_PRESETS.find(p => p.id === 'flat');
     if (flatPreset) {
@@ -533,12 +519,11 @@ export const EqualizerSheet = forwardRef<SheetRef, EqualizerSheetProps>((_, ref)
 
   const renderPresetCategory = useCallback((
     categoryKey: string,
-    title: string,
-    count: number,
     presetIds: string[]
   ) => {
     const isExpanded = expandedCategories[categoryKey];
     const categoryPresets = EQ_PRESETS.filter(p => presetIds.includes(p.id));
+    const info = (CATEGORY_INFO as any)[categoryKey] || { name: categoryKey, description: '' };
 
     return (
       <View key={categoryKey} style={styles.categoryContainer}>
@@ -546,16 +531,30 @@ export const EqualizerSheet = forwardRef<SheetRef, EqualizerSheetProps>((_, ref)
           style={styles.categoryHeader}
           onPress={() => toggleCategory(categoryKey)}
         >
-          <View style={styles.categoryHeaderLeft}>
-            <View style={styles.categoryIndicator} />
-            <Text style={styles.categoryTitle}>{title}</Text>
-            <Text style={styles.categoryCount}>({count} presets)</Text>
+          <View style={styles.categoryIndicator} />
+          <View style={styles.categoryTextContainer}>
+            <View style={styles.categoryTitleRow}>
+              <Text style={styles.categoryTitle} numberOfLines={1}>{info.name}</Text>
+              <Text style={styles.categoryCount}>{presetIds.length}</Text>
+            </View>
+            {info.description && (
+              <Text
+                variant="caption"
+                color="secondary"
+                style={{ fontSize: 10, lineHeight: 14 }}
+                numberOfLines={2}
+              >
+                {info.description}
+              </Text>
+            )}
           </View>
-          {isExpanded ? (
-            <AltArrowUp size={20} color={colors.textSecondary} />
-          ) : (
-            <AltArrowDown size={20} color={colors.textSecondary} />
-          )}
+          <View style={styles.categoryIconContainer}>
+            {isExpanded ? (
+              <AltArrowUp size={20} color={colors.textSecondary} />
+            ) : (
+              <AltArrowDown size={20} color={colors.textSecondary} />
+            )}
+          </View>
         </Pressable>
 
         {isExpanded && (
@@ -591,7 +590,6 @@ export const EqualizerSheet = forwardRef<SheetRef, EqualizerSheetProps>((_, ref)
 
   const currentPreset = EQ_PRESETS.find(p => p.id === activePreset);
   const impact = getImpactLevel();
-  const [isSliding, setIsSliding] = useState(false);
 
   return (
     <Sheet
@@ -640,7 +638,7 @@ export const EqualizerSheet = forwardRef<SheetRef, EqualizerSheetProps>((_, ref)
           nestedScrollEnabled
           renderToHardwareTextureAndroid
           removeClippedSubviews
-          scrollEnabled={!isSliding}
+          scrollEnabled={true} // will be {!isSliding} when manual sliders are re-enabled
         >
           {/* Frequency Visualizer */}
           <View style={styles.visualizerContainer}>
@@ -692,20 +690,19 @@ export const EqualizerSheet = forwardRef<SheetRef, EqualizerSheetProps>((_, ref)
             </View>
           )}
 
-          {/* Preset Categories */}
           <View style={styles.presetsSection}>
             <View style={styles.sectionHeader}>
               <View style={[styles.sectionIndicator, { width: 32 }]} />
               <Text style={styles.sectionTitle}>Sound Presets</Text>
             </View>
 
-            {renderPresetCategory('signatures', 'Sound Signatures', PRESET_CATEGORIES.signatures.length, PRESET_CATEGORIES.signatures)}
-            {renderPresetCategory('genres', 'Music Genres', PRESET_CATEGORIES.genres.length, PRESET_CATEGORIES.genres)}
-            {renderPresetCategory('situational', 'Device & Situation', PRESET_CATEGORIES.situational.length, PRESET_CATEGORIES.situational)}
+            {Object.entries(PRESET_CATEGORIES).map(([key, ids]) =>
+              renderPresetCategory(key, ids as string[])
+            )}
           </View>
 
           {/* Manual Sliders */}
-          <View style={styles.slidersSection}>
+          {/* <View style={styles.slidersSection}>
             <View style={styles.sectionHeader}>
               <View style={[styles.sectionIndicator, { width: 32 }]} />
               <Text style={styles.sectionTitle}>Manual Adjustment</Text>
@@ -745,7 +742,7 @@ export const EqualizerSheet = forwardRef<SheetRef, EqualizerSheetProps>((_, ref)
                 </View>
               ))}
             </GestureHandlerRootView>
-          </View>
+          </View> */}
         </ScrollView>
 
         {/* Disabled Overlay */}

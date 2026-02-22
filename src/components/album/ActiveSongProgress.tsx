@@ -9,7 +9,7 @@ import { makeScalingStyles, useScalingStyles } from '../../utils/style.util';
 
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
-const createStyles = makeScalingStyles((s, colors: ThemeColors) => ({
+const createStyles = makeScalingStyles((_s, _colors: ThemeColors) => ({
   container: {
     ...StyleSheet.absoluteFillObject,
     zIndex: -1,

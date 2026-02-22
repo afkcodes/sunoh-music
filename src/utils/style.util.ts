@@ -172,7 +172,6 @@ export const useScaling = (): ScalingFunctions => {
 
     // Core scaling functions with capping for non-default display sizes
     const scale = (size: number): number => {
-      const cappedScaleX = Math.min(rawScaleX, DESIGN_WIDTH * MAX_SCALE_FACTORS.SCALE / DESIGN_WIDTH + (rawScaleX - DESIGN_WIDTH / DESIGN_WIDTH));
       const effectiveScale = displaySizeMode === 'default' ? rawScaleX : Math.min(rawScaleX, 1 + MAX_SCALE_FACTORS.SCALE - 1);
       return PixelRatio.roundToNearestPixel(effectiveScale * size);
     };

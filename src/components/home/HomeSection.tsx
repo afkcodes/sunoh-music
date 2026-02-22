@@ -46,7 +46,7 @@ export const HomeSection: React.FC<HomeSectionProps> = React.memo(({
   const { navigateToItem } = useMediaNavigation();
   const { stateNavigator } = useNavigationEvent();
 
-  const limitedData = useMemo(() => data.slice(0, 10), [data]);
+  const limitedData = useMemo(() => data.slice(0, 8), [data]);
 
   const renderInnerItem = useCallback((item: SaavnItem, index: number) => {
     const props = getMediaItemProps(item, sectionProvider);

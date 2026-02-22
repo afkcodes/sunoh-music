@@ -1,4 +1,4 @@
-import { AudioPro, AudioProRepeatMode, AudioProState, AudioProTrack, useAudioPro } from 'react-native-audio-pro';
+import { AudioPro, AudioProCastState, AudioProRepeatMode, AudioProState, AudioProTrack, useAudioPro } from 'react-native-audio-pro';
 import { create } from 'zustand';
 import { audioService } from '../services/audio/AudioService';
 import { mmkv } from './storage';
@@ -17,6 +17,7 @@ interface PlayerAppState {
   queue: AudioProTrack[];
   optimisticCurrentTrack: AudioProTrack | null;
   isFetching: boolean;
+  castState: AudioProCastState;
   radioId: string | null;
   radioProvider: 'saavn' | 'gaana' | 'unified' | null;
   radioLanguage: string | null;
@@ -47,6 +48,7 @@ interface PlayerAppState {
   setInitialized: (initialized: boolean) => void;
   setOptimisticCurrentTrack: (track: AudioProTrack | null) => void;
   setIsFetching: (isFetching: boolean) => void;
+  setCastState: (castState: AudioProCastState) => void;
   setRadio: (radioId: string | null, provider: 'saavn' | 'gaana' | 'unified' | null, language?: string | null, type?: string | null) => void;
 }
 
@@ -99,6 +101,7 @@ export const usePlayerStore = create<PlayerAppState>((set, get) => {
     shuffleMode: false,
     isInitialized: false,
     isFetching: false,
+    castState: 'NO_DEVICES_AVAILABLE' as AudioProCastState,
     radioId: null,
     radioProvider: null,
     radioLanguage: null,
@@ -108,6 +111,7 @@ export const usePlayerStore = create<PlayerAppState>((set, get) => {
       audioService.play(track);
       if (track) {
         set({
+          queue: [track], // Update store queue to reflect single track
           minimized: false,
           optimisticCurrentTrack: track,
           ...(keepContext ? {} : { radioId: null, radioProvider: null, radioLanguage: null, radioType: null })
@@ -200,6 +204,7 @@ export const usePlayerStore = create<PlayerAppState>((set, get) => {
       get().syncQueue();
     },
     setIsFetching: (isFetching) => set({ isFetching }),
+    setCastState: (castState) => set({ castState }),
     setRadio: (radioId, radioProvider, radioLanguage, radioType) =>
       set({ radioId, radioProvider, radioLanguage: radioLanguage || null, radioType: radioType || null }),
   };

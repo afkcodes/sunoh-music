@@ -9,6 +9,7 @@ import { Routes } from './routes';
 
 // Screens
 import { AlbumScreen } from '../../screens/AlbumScreen';
+import { ArtistScreen } from '../../screens/ArtistScreen';
 import { DebugLogsScreen } from '../../screens/DebugLogsScreen';
 import HomeScreen from '../../screens/HomeScreen';
 import LibraryScreen from '../../screens/LibraryScreen';
@@ -70,6 +71,9 @@ export const Tabs = () => {
             <Scene stateKey={Routes.Album}>
               <AlbumScreen />
             </Scene>
+            <Scene stateKey={Routes.Artist}>
+              <ArtistScreen />
+            </Scene>
             <Scene stateKey={Routes.Song}>
               <SongScreen />
             </Scene>
@@ -118,6 +122,9 @@ export const Tabs = () => {
             <Scene stateKey={Routes.Album}>
               <AlbumScreen />
             </Scene>
+            <Scene stateKey={Routes.Artist}>
+              <ArtistScreen />
+            </Scene>
             <Scene stateKey={Routes.Song}>
               <SongScreen />
             </Scene>
@@ -156,6 +163,9 @@ export const Tabs = () => {
             </Scene>
             <Scene stateKey={Routes.Album}>
               <AlbumScreen />
+            </Scene>
+            <Scene stateKey={Routes.Artist}>
+              <ArtistScreen />
             </Scene>
             <Scene stateKey={Routes.Song}>
               <SongScreen />

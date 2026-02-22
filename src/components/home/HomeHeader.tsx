@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
 import { Pressable, View } from 'react-native';
 
+import { AudioProCastState } from 'react-native-audio-pro';
 import { spacing } from '../../theme';
 import { useTheme } from '../../theme/ThemeContext';
 import { makeScalingStyles, useScalingStyles } from '../../utils/style.util';
-import { Settings } from '../common/SolarIcons.generated';
+import { Settings, Tv } from '../common/SolarIcons.generated';
 import { Text } from '../common/Text';
 
 
@@ -12,6 +13,8 @@ interface HomeHeaderProps {
   userName?: string;
   onProfilePress?: () => void;
   onSettingsPress?: () => void;
+  onCastPress?: () => void;
+  castState?: AudioProCastState;
 }
 
 const createStyles = makeScalingStyles((s, theme) => ({
@@ -62,7 +65,7 @@ const createStyles = makeScalingStyles((s, theme) => ({
     height: s.touchable(40),
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: theme.bgSurfaceHover, 
+    backgroundColor: theme.bgSurfaceHover,
   }
 }));
 
@@ -75,13 +78,15 @@ const getGreeting = () => {
 };
 
 
-export const HomeHeader: React.FC<HomeHeaderProps> = React.memo(({ 
-  onSettingsPress 
+export const HomeHeader: React.FC<HomeHeaderProps> = React.memo(({
+  onSettingsPress,
+  onCastPress,
+  castState,
 }) => {
   const { colors } = useTheme();
   // @ts-ignore
   const styles = useScalingStyles(createStyles, colors);
-  
+
   const greeting = useMemo(() => getGreeting(), []);
 
   const renderIconButton = (icon: React.ReactNode, onPress?: () => void) => (
@@ -103,13 +108,22 @@ export const HomeHeader: React.FC<HomeHeaderProps> = React.memo(({
 
       {/* Right: Actions */}
       <View style={styles.actionsRow}>
-        <View style={{flexDirection: 'row', gap: 16, alignItems: 'center'}}>
-            
-            {/* Settings */}
-            {renderIconButton(
-                <Settings size={22} color={colors.textPrimary} />, // Smaller size
-                onSettingsPress
-            )}
+        <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
+
+          {/* Cast — only shown when devices are available */}
+          {castState !== 'NO_DEVICES_AVAILABLE' && renderIconButton(
+            <Tv
+              size={22}
+              color={castState === 'CONNECTED' ? colors.primaryBase : colors.textPrimary}
+            />,
+            onCastPress
+          )}
+
+          {/* Settings */}
+          {renderIconButton(
+            <Settings size={22} color={colors.textPrimary} />, // Smaller size
+            onSettingsPress
+          )}
         </View>
       </View>
     </View>

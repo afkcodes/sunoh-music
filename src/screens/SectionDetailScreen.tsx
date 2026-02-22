@@ -43,7 +43,7 @@ const createStyles = makeScalingStyles((s, colors: ThemeColors) => ({
     paddingBottom: s.mScale(spacing.lg),
   },
   itemInner: {
-    marginHorizontal: s.mScale(spacing.xs),
+    marginHorizontal: s.mScale(spacing.sm),
   },
   loadingContainer: {
     padding: s.mScale(spacing.xl),
@@ -83,10 +83,15 @@ export const SectionDetailScreen: React.FC = () => {
   const s = useScaling();
 
   const cardSize = useMemo(() => {
+    // List has horizontal padding on both sides
     const listPadding = s.mScale(spacing.lg) * 2;
+    // Each item has marginHorizontal (left + right)
+    const itemMargin = s.mScale(spacing.sm) * 2;
+    // Available width after list padding, divided by columns, minus item margins
     const availableWidth = width - listPadding;
     const columnWidth = availableWidth / NUM_COLUMNS;
-    return columnWidth - s.mScale(spacing.xs) * 2 - s.mScale(2);
+    // Subtract item margins and a buffer for gap
+    return Math.floor(columnWidth - itemMargin - 4);
   }, [width, s]);
 
   const renderItem = useCallback(

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ScrollView, View } from 'react-native';
+import { AudioPro } from 'react-native-audio-pro';
 import { useTheme } from '../theme/ThemeContext';
 import { makeScalingStyles, useScalingStyles } from '../utils/style.util';
 
@@ -10,9 +11,10 @@ import LogoAnimation from '../components/common/Loader';
 import { HomeHeader } from '../components/home/HomeHeader';
 import { HomeSection } from '../components/home/HomeSection';
 import { useHomeData } from '../hooks/useHomeData';
+import { usePlayerStore } from '../store/usePlayerStore';
 import { spacing, ThemeColors } from '../theme';
 
-const createStyles = makeScalingStyles((s, colors: ThemeColors) => ({
+const createStyles = makeScalingStyles((_s, colors: ThemeColors) => ({
     container: {
         flex: 1,
         backgroundColor: colors.bgPage,
@@ -36,6 +38,7 @@ const HomeScreen = () => {
     const styles = useScalingStyles(createStyles, colors);
     const { data: homeData, isLoading, error } = useHomeData({ provider: 'unified' });
     const { stateNavigator } = useNavigationEvent();
+    const castState = usePlayerStore((s) => s.castState);
 
     // State for incremental rendering
     const [visibleCount, setVisibleCount] = useState(INITIAL_RENDER_COUNT);
@@ -73,11 +76,15 @@ const HomeScreen = () => {
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
                 removeClippedSubviews={true} // Optimization for heavy lists
-                scrollEventThrottle={32} // Interactive update rate
+                scrollEventThrottle={16} // Interactive update rate
                 onScroll={onScroll}
                 renderToHardwareTextureAndroid
             >
-                <HomeHeader onSettingsPress={() => stateNavigator.navigate(Routes.Settings)} />
+                <HomeHeader
+                    onSettingsPress={() => stateNavigator.navigate(Routes.Settings)}
+                    castState={castState}
+                    onCastPress={() => AudioPro.showCastDialog()}
+                />
 
                 {visibleData.map((section, index) => {
                     // Don't render last item if it was sliced off in original code,

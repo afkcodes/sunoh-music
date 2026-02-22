@@ -1,8 +1,8 @@
-import { useNavigationEvent } from 'navigation-react';
 import React from 'react';
 import { Pressable, View } from 'react-native';
 import ShareModule from 'react-native-share';
 import TurboImage from 'react-native-turbo-image';
+import { homeNavigator } from '../../app/navigation/navigators';
 import { Routes } from '../../app/navigation/routes';
 import { useLibraryStore } from '../../store/useLibraryStore';
 import { useMenuStore } from '../../store/useMenuStore';
@@ -67,7 +67,6 @@ export const SongMenuSheet = () => {
   const { song, visible, hideSongMenu } = useMenuStore();
   const { isLiked, toggleLikeSong } = useLibraryStore();
   const { playNext, addToQueue } = usePlayer();
-  const { stateNavigator } = useNavigationEvent();
   const sheetRef = React.useRef<SheetRef>(null);
 
   // Auto-present when visible becomes true
@@ -116,10 +115,13 @@ export const SongMenuSheet = () => {
       label: 'Go to Album',
       icon: MusicNote,
       onPress: () => {
-        stateNavigator.navigate(Routes.Album, {
-          albumId: song.albumId,
-          provider: (song as any).provider || 'saavn'
-        });
+        const albumId = song.albumId;
+        if (albumId) {
+          homeNavigator.navigate(Routes.Album, {
+            albumId,
+            provider: (song as any).provider || 'saavn'
+          });
+        }
       },
     },
     {
@@ -128,9 +130,8 @@ export const SongMenuSheet = () => {
       onPress: () => {
         // Some songs have multiple artists, we'll take the first one
         if (song.artists && song.artists.length > 0) {
-          stateNavigator.navigate(Routes.Details, {
-            id: song.artists[0]?.id,
-            type: 'artist',
+          homeNavigator.navigate(Routes.Artist, {
+            artistId: song.artists[0]?.id,
             provider: (song as any).provider || 'saavn'
           });
         }
@@ -157,7 +158,7 @@ export const SongMenuSheet = () => {
   };
 
   return (
-    <Sheet ref={sheetRef} sizes={['auto']} onDismiss={handleDismiss}>
+    <Sheet ref={sheetRef} sizes={['auto']} onDidDismiss={handleDismiss}>
       {song && (
         <View style={styles.content}>
           <View style={styles.header}>

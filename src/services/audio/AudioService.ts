@@ -1,5 +1,5 @@
 import { AppState, AppStateStatus } from 'react-native';
-import { AudioPro, AudioProEvent, AudioProEventType, AudioProRepeatMode, AudioProTrack } from 'react-native-audio-pro';
+import { AudioPro, AudioProCastState, AudioProEvent, AudioProEventType, AudioProRepeatMode, AudioProTrack } from 'react-native-audio-pro';
 import { mmkv } from '../../store/storage';
 import { debugLogger } from '../../utils/debugLogger';
 
@@ -86,6 +86,14 @@ class AudioService {
       case AudioProEventType.TRACK_ENDED:
         mmkv.remove(STORAGE_KEYS.POSITION);
         break;
+
+      case AudioProEventType.CAST_STATE_CHANGED:
+        if (event.payload?.castState !== undefined) {
+          // Lazy-import to avoid circular dependency
+          const { usePlayerStore } = require('../../store/usePlayerStore');
+          usePlayerStore.getState().setCastState(event.payload.castState as AudioProCastState);
+        }
+        break;
     }
   };
 
@@ -135,15 +143,12 @@ class AudioService {
 
   play(track?: AudioProTrack) {
     if (track) {
+      // Clear existing queue and play this single track
+      // Auto-queue will handle adding more songs
+      AudioPro.clearMediaItems();
       AudioPro.addMediaItems([track]);
-      AudioPro.getMediaItems().then((q) => {
-        const targetIndex = q.length - 1;
-        if (targetIndex >= 0) {
-          AudioPro.seekToMediaItem(targetIndex);
-        }
-        AudioPro.play();
-        this.persistQueue();
-      });
+      AudioPro.play();
+      this.persistQueue();
     } else {
       AudioPro.play();
     }

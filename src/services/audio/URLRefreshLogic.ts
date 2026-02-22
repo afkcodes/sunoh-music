@@ -193,6 +193,12 @@ export class URLRefreshLogic {
     if (retryCount < this.MAX_ERROR_RETRIES) {
       this.errorRetryCount.set(trackId, retryCount + 1);
 
+      // Stop playback FIRST so Media3 stops retrying with the stale URL.
+      // This prevents a race where Media3 retries the old URL while we're
+      // fetching the fresh one, potentially putting the player in a deeper
+      // error state by the time we call play().
+      AudioPro.stop();
+
       const newUrl = await this.fetchFreshUrl(track);
 
       if (newUrl && newUrl !== track.url) {
@@ -201,17 +207,19 @@ export class URLRefreshLogic {
         }
         debugLogger.log('URL_REFRESH', { event: 'retry_with_fresh_url', index, title: track.title });
 
-        // Update the track with fresh URL
+        // Update the track with fresh URL.
+        // stop() already moved the player to STOPPED/IDLE so replaceMediaItem
+        // is safe — no race with Media3's internal retry timer.
         AudioPro.updateTrack(index, {
           ...track,
           url: newUrl,
         });
 
-        // Small delay to let the update propagate, then replay
+        // Wait for the UI-thread updateTrack to settle before triggering play.
+        // play(null) handles STATE_IDLE by calling prepare() then play().
         setTimeout(() => {
-          AudioPro.seekToMediaItem(index);
           AudioPro.play();
-        }, 100);
+        }, 300);
 
         return;
       } else {
@@ -247,7 +255,7 @@ export class URLRefreshLogic {
     if (nextState === 'background' || nextState === 'inactive') {
       // Save current position before going to background
       try {
-        const progress = AudioPro.getCurrentProgress();
+        const progress = AudioPro.getTimings();
         const currentIndex = AudioPro.getCurrentMediaItemIndex();
         const queue = await AudioPro.getMediaItems();
         
@@ -287,7 +295,7 @@ export class URLRefreshLogic {
     }
 
     try {
-      const progress = AudioPro.getCurrentProgress();
+      const progress = AudioPro.getTimings();
       const currentIndex = AudioPro.getCurrentMediaItemIndex();
       const queue = await AudioPro.getMediaItems();
 
@@ -384,6 +392,17 @@ export class URLRefreshLogic {
         }
       } else if (event.type === AudioProEventType.PLAYBACK_ERROR) {
         // Error Recovery: Try to refresh current track and retry, skip if fails
+        // Skip during startup stabilization window to avoid interfering with cold-start restore
+        const nowErr = Date.now();
+        const timeSinceActiveErr = nowErr - this.lastActiveTimestamp;
+        const timeSinceBgErr = nowErr - this.lastBackgroundTimestamp;
+        const startupStabilizing = timeSinceActiveErr < this.FOREGROUND_STABILIZATION_MS ||
+                                    timeSinceBgErr < this.FOREGROUND_STABILIZATION_MS;
+        if (startupStabilizing) {
+          debugLogger.log('SYSTEM', `URLRefresh: Ignoring PLAYBACK_ERROR (stabilization: active=${timeSinceActiveErr}ms, bg=${timeSinceBgErr}ms)`);
+          return;
+        }
+
         const { index } = event.payload || {};
         const errorMessage = event.payload?.error || 'Unknown error';
 

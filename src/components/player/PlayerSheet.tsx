@@ -10,7 +10,7 @@ import { AppTheme } from '../../theme/types';
 import { makeScalingStyles, useScalingStyles } from '../../utils/style.util';
 import { SafeView } from '../common';
 import { Sheet, SheetRef } from '../common/Sheet';
-import { Heart, HeartFill, ListMusic, Pause, Play, Repeat, Shuffle, SkipNext, SkipPrevious, Tuning } from '../common/SolarIcons.generated';
+import { Heart, HeartFill, ListMusic, Pause, Play, Repeat, RepeatOne, Shuffle, SkipNext, SkipPrevious, Tuning } from '../common/SolarIcons.generated';
 import { Text } from '../common/Text';
 
 import { AudioProRepeatMode } from 'react-native-audio-pro';
@@ -120,6 +120,10 @@ const createStyles = makeScalingStyles((s, theme: AppTheme) => ({
     height: s.mScale(44),
     justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: s.mScale(22),
+  },
+  secondaryControlButtonActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
   footerRow: {
     flexDirection: 'row',
@@ -312,7 +316,13 @@ export const PlayerSheet = forwardRef<SheetRef, PlayerSheetProps>(({ onOpenQueue
 
             {/* Controls */}
             <View style={styles.controlsRow}>
-              <Pressable style={styles.secondaryControlButton} onPress={toggleShuffle}>
+              <Pressable 
+                style={[
+                  styles.secondaryControlButton, 
+                  shuffleMode && styles.secondaryControlButtonActive
+                ]} 
+                onPress={toggleShuffle}
+              >
                 <Shuffle size={22} color={shuffleMode ? (playerTheme?.primary ?? '#FFF') : (playerTheme?.onSurfaceVariant ?? 'rgba(255, 255, 255, 0.75)')} />
               </Pressable>
 
@@ -332,8 +342,18 @@ export const PlayerSheet = forwardRef<SheetRef, PlayerSheetProps>(({ onOpenQueue
                 <SkipNext size={38} color={playerTheme?.onSurface ?? '#FFF'} />
               </Pressable>
 
-              <Pressable style={styles.secondaryControlButton} onPress={toggleRepeat}>
-                <Repeat size={22} color={repeatMode !== AudioProRepeatMode.OFF ? (playerTheme?.primary ?? '#FFF') : (playerTheme?.onSurfaceVariant ?? 'rgba(255, 255, 255, 0.75)')} />
+              <Pressable 
+                style={[
+                  styles.secondaryControlButton,
+                  repeatMode !== AudioProRepeatMode.OFF && styles.secondaryControlButtonActive
+                ]} 
+                onPress={toggleRepeat}
+              >
+                {repeatMode === AudioProRepeatMode.ONE ? (
+                  <RepeatOne size={22} color={playerTheme?.primary ?? '#FFF'} />
+                ) : (
+                  <Repeat size={22} color={repeatMode !== AudioProRepeatMode.OFF ? (playerTheme?.primary ?? '#FFF') : (playerTheme?.onSurfaceVariant ?? 'rgba(255, 255, 255, 0.75)')} />
+                )}
               </Pressable>
             </View>
 

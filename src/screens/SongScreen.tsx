@@ -427,7 +427,7 @@ export const SongScreen: React.FC = () => {
   // HOOKS & STATE
   // ============================================================================
 
-  const { play, playQueue, currentTrack, isPlaying, togglePlayPause } = usePlayer();
+  const { playQueue, currentTrack, isPlaying, togglePlayPause } = usePlayer();
   const { isLiked, toggleLikeSong } = useLibraryStore();
 
   const isSongLiked = isLiked(songId, 'song');

@@ -1,7 +1,6 @@
-import { LegendList } from '@legendapp/list';
 import { useNavigationEvent } from 'navigation-react';
 import React, { useCallback, useEffect, useMemo } from 'react';
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Animated, {
   cancelAnimation,
@@ -14,7 +13,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TurboImage from 'react-native-turbo-image';
-import { SongListItem } from '../components/album/SongListItem';
 import { SafeView } from '../components/common';
 import LogoAnimation from '../components/common/Loader';
 import {
@@ -29,21 +27,18 @@ import {
 } from '../components/common/SolarIcons.generated';
 import { Text } from '../components/common/Text';
 import { HomeSection } from '../components/home/HomeSection';
-import { useAlbumData } from '../hooks/useAlbumData';
+import { useArtistData } from '../hooks/useArtistData';
 import { useLibraryStore } from '../store/useLibraryStore';
 import { usePlayer } from '../store/usePlayerStore';
-import { borderRadius, fontNames, spacing, ThemeColors } from '../theme';
+import { fontNames, spacing, ThemeColors } from '../theme';
 import { useTheme } from '../theme/ThemeContext';
-import { Song } from '../types/album';
 import { decodeHtmlEntities } from '../utils/htmlDecode';
 import { makeScalingStyles, useScaling, useScalingStyles } from '../utils/style.util';
 import { mapSongToTrack } from '../utils/trackMapping';
 
 const HEADER_SCROLL_DISTANCE = 360;
 
-const AnimatedLegendList = Animated.createAnimatedComponent(
-  LegendList
-) as unknown as typeof LegendList;
+const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
 
 const createStyles = makeScalingStyles((s, colors: ThemeColors) => ({
   container: {
@@ -57,7 +52,7 @@ const createStyles = makeScalingStyles((s, colors: ThemeColors) => ({
   },
   header: {
     position: 'relative',
-    minHeight: s.mScale(500),
+    minHeight: s.mScale(450),
   },
   heroBackground: {
     position: 'absolute',
@@ -89,9 +84,9 @@ const createStyles = makeScalingStyles((s, colors: ThemeColors) => ({
   },
   artworkContainer: {
     position: 'relative',
-    width: s.mScale(320),
-    height: s.mScale(320),
-    borderRadius: s.mScale(borderRadius.xl),
+    width: s.mScale(200),
+    height: s.mScale(200),
+    borderRadius: s.mScale(100), // Circular for artists
     overflow: 'hidden',
     backgroundColor: colors.bgSurfaceHover,
   },
@@ -115,6 +110,13 @@ const createStyles = makeScalingStyles((s, colors: ThemeColors) => ({
     height: s.mScale(4),
     borderRadius: s.mScale(2),
     backgroundColor: colors.textTertiary,
+  },
+  bioContainer: {
+    paddingHorizontal: s.mScale(spacing.lg),
+    paddingVertical: s.mScale(spacing.md),
+  },
+  bioText: {
+    lineHeight: s.mScale(20),
   },
   actionButtonsRow: {
     width: '100%',
@@ -142,16 +144,8 @@ const createStyles = makeScalingStyles((s, colors: ThemeColors) => ({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  songList: {
-    flex: 1,
-  },
-  songListContent: {
-    paddingBottom: s.mScale(spacing.xl),
-  },
-  separator: {
-    height: s.mScale(1),
-    backgroundColor: colors.borderSubtle,
-    marginLeft: s.mScale(60),
+  sectionsContainer: {
+    gap: s.mScale(spacing.md),
   },
   stickyHeader: {
     position: 'absolute',
@@ -174,36 +168,55 @@ const createStyles = makeScalingStyles((s, colors: ThemeColors) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sectionsContainer: {
-    gap: s.mScale(spacing.md),
-  },
 }));
 
 // ============================================================================
 // MEMOIZED SUB-COMPONENTS
 // ============================================================================
 
-/**
- * Memoized Album Header Component
- * Only re-renders when album data actually changes
- */
-const AlbumHeader = React.memo<{
-  album: any;
+const ArtistHeader = React.memo<{
+  artist: any;
   imageUrl: string;
   artworkAnimatedStyle: any;
   colors: ThemeColors;
   styles: any;
-  handlePlayAll: () => void;
+  handlePlayTop: () => void;
   toggleLike: () => void;
   isLiked: boolean;
   shuffleMode: boolean;
   toggleShuffle: () => void;
   isPlaying: boolean;
-  isCurrentAlbumContext: boolean;
+  isCurrentArtistContext: boolean;
 }>(
-  ({ album, imageUrl, artworkAnimatedStyle, colors, styles, handlePlayAll, toggleLike, isLiked, shuffleMode, toggleShuffle, isPlaying, isCurrentAlbumContext }) => {
-    // Logic: If playing AND one of the album's songs is current -> Pause, else Play
-    const showPause = isPlaying && isCurrentAlbumContext;
+  ({ 
+    artist, 
+    imageUrl, 
+    artworkAnimatedStyle, 
+    colors, 
+    styles, 
+    handlePlayTop, 
+    toggleLike, 
+    isLiked, 
+    shuffleMode, 
+    toggleShuffle, 
+    isPlaying, 
+    isCurrentArtistContext 
+  }) => {
+    const showPause = isPlaying && isCurrentArtistContext;
+    
+    // Format followers count
+    const formatFollowers = (followers: string | number | undefined) => {
+      if (!followers) return '';
+      const num = typeof followers === 'string' ? parseInt(followers, 10) : followers;
+      if (isNaN(num)) return '';
+      if (num >= 1000000) {
+        return `${(num / 1000000).toFixed(1)}M Followers`;
+      }
+      if (num >= 1000) {
+        return `${(num / 1000).toFixed(1)}K Followers`;
+      }
+      return `${num} Followers`;
+    };
 
     return (
       <View style={styles.header}>
@@ -213,7 +226,7 @@ const AlbumHeader = React.memo<{
             source={{ uri: imageUrl }}
             style={styles.heroBackgroundImage}
             resizeMode="cover"
-            blurRadius={25}
+            blurRadius={30}
           />
         </View>
 
@@ -225,7 +238,7 @@ const AlbumHeader = React.memo<{
 
         {/* Hero Content */}
         <View style={styles.heroContent}>
-          {/* Album Artwork */}
+          {/* Artist Image (Circular) */}
           <Animated.View style={[styles.artworkContainer, artworkAnimatedStyle]}>
             <TurboImage
               source={{ uri: imageUrl }}
@@ -235,28 +248,23 @@ const AlbumHeader = React.memo<{
             />
           </Animated.View>
 
-          {/* Album Metadata */}
+          {/* Artist Metadata */}
           <View style={styles.metadata}>
             <Text variant="h1" center numberOfLines={2} style={{ fontFamily: fontNames.bold }}>
-              {decodeHtmlEntities(album?.title || '')}
-            </Text>
-            <Text variant="body" style={{ textAlign: 'center' }} color="secondary" numberOfLines={2}>
-              {decodeHtmlEntities(album?.subtitle || '')}
+              {decodeHtmlEntities(artist?.name || '')}
             </Text>
             <View style={styles.metaRow}>
-              {(album?.year || album?.releaseDate) && (
-                <>
-                  <Text variant="caption" color="secondary">
-                    {decodeHtmlEntities(album?.year || album?.releaseDate || '')}
-                  </Text>
-                  <View style={styles.dot} />
-                </>
+              {artist?.followers && (
+                <Text variant="body" color="secondary">
+                  {formatFollowers(artist.followers)}
+                </Text>
               )}
-              <Text variant="caption" color="secondary">
-                {album?.songCount || album?.listCount || (album?.songs?.length || 0).toString()}{' '}
-                {parseInt(album?.songCount || album?.listCount || (album?.songs?.length || 0).toString()) === 1 ? 'Song' : 'Songs'}
-              </Text>
             </View>
+            {artist?.subtitle && (
+              <Text variant="caption" color="secondary" center>
+                {decodeHtmlEntities(artist.subtitle)}
+              </Text>
+            )}
           </View>
 
           {/* Action Buttons Row */}
@@ -276,7 +284,6 @@ const AlbumHeader = React.memo<{
                 )}
               </Pressable>
 
-
               <Pressable onPress={() => console.log('Share pressed')} style={styles.iconButton}>
                 <Share size={24} color={colors.textPrimary} />
               </Pressable>
@@ -285,9 +292,8 @@ const AlbumHeader = React.memo<{
                 <Shuffle size={24} color={shuffleMode ? colors.primaryBase : colors.textPrimary} />
               </Pressable>
 
-
               <Pressable
-                onPress={handlePlayAll}
+                onPress={handlePlayTop}
                 style={({ pressed }) => [styles.playButton, pressed && { opacity: 0.8 }]}
               >
                 {showPause ? (
@@ -303,61 +309,65 @@ const AlbumHeader = React.memo<{
     );
   },
   (prevProps, nextProps) => {
-    // Custom comparison - only re-render if these change
     return (
-      prevProps.album?.id === nextProps.album?.id &&
+      prevProps.artist?.id === nextProps.artist?.id &&
       prevProps.imageUrl === nextProps.imageUrl &&
       prevProps.colors === nextProps.colors &&
       prevProps.isLiked === nextProps.isLiked &&
       prevProps.shuffleMode === nextProps.shuffleMode &&
       prevProps.isPlaying === nextProps.isPlaying &&
-      prevProps.isCurrentAlbumContext === nextProps.isCurrentAlbumContext
+      prevProps.isCurrentArtistContext === nextProps.isCurrentArtistContext
     );
   }
 );
 
-AlbumHeader.displayName = 'AlbumHeader';
+ArtistHeader.displayName = 'ArtistHeader';
 
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
-export const AlbumScreen: React.FC = () => {
+export const ArtistScreen: React.FC = () => {
   const { colors } = useTheme();
   const styles = useScalingStyles(createStyles, colors);
   const { data, stateNavigator } = useNavigationEvent();
-  const albumId = data.albumId as string;
-  const provider = (data.provider as any) || 'saavn';
-  const { data: albumData, isLoading, error } = useAlbumData(albumId, provider);
+  const artistId = data.artistId as string;
+  const { data: artistData, isLoading, error } = useArtistData(artistId);
   const s = useScaling();
+  const insets = useSafeAreaInsets();
 
-  const album = albumData?.data?.album || albumData?.data?.playlist || albumData?.data;
-  const sections = albumData?.data?.sections || album?.sections || [];
+  const artist = artistData?.data;
+  const sections = artist?.sections || [];
 
-  // Use last item in array for imagery
-  const imagery = album?.image || album?.artwork || [];
+  // Get top songs from sections (first section with "Top Songs" heading)
+  const topSongs = useMemo(() => {
+    const topSongsSection = sections.find(
+      (section: any) => section.heading?.toLowerCase().includes('top songs')
+    );
+    return topSongsSection?.data || [];
+  }, [sections]);
+
+  // Use last item in image array for high quality
+  const imagery = artist?.image || [];
   const imageUrl = Array.isArray(imagery) ? imagery[imagery.length - 1]?.link || '' : imagery || '';
 
   // ============================================================================
-  // OPTIMIZED SCROLL ANIMATIONS
+  // SCROLL ANIMATIONS
   // ============================================================================
 
   const scrollY = useSharedValue(0);
 
-  // Cleanup on unmount to prevent memory leaks
   useEffect(() => {
     return () => {
       cancelAnimation(scrollY);
     };
   }, [scrollY]);
 
-  // Derived value to determine if hero should animate
   const shouldAnimateHero = useDerivedValue(() => {
     'worklet';
     return scrollY.value < HEADER_SCROLL_DISTANCE;
   }, []);
 
-  // Optimized scroll handler
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
       'worklet';
@@ -365,11 +375,9 @@ export const AlbumScreen: React.FC = () => {
     },
   });
 
-  // Optimized artwork animation - STOPS when off-screen
   const artworkAnimatedStyle = useAnimatedStyle(() => {
     'worklet';
 
-    // Early return if hero is completely off-screen
     if (!shouldAnimateHero.value) {
       return {
         transform: [{ scale: 0.7 }],
@@ -377,9 +385,8 @@ export const AlbumScreen: React.FC = () => {
       };
     }
 
-    // More efficient calculation than interpolate
     const progress = scrollY.value / HEADER_SCROLL_DISTANCE;
-    const scale = 1 - progress * 0.3; // Goes from 1 to 0.7
+    const scale = 1 - progress * 0.3;
     const opacityProgress = scrollY.value / (HEADER_SCROLL_DISTANCE * 0.8);
     const opacity = Math.max(0, 1 - opacityProgress);
 
@@ -389,8 +396,6 @@ export const AlbumScreen: React.FC = () => {
     };
   }, []);
 
-  // Optimized header animation
-  // 1. Background opacity (0 -> 1)
   const headerBackgroundAnimatedStyle = useAnimatedStyle(() => {
     'worklet';
     const opacity = interpolate(
@@ -402,7 +407,6 @@ export const AlbumScreen: React.FC = () => {
     return { opacity };
   }, []);
 
-  // 2. Title animation (Opacity 0 -> 1, TranslateY 10 -> 0)
   const headerTitleAnimatedStyle = useAnimatedStyle(() => {
     'worklet';
     const opacity = interpolate(
@@ -420,9 +424,6 @@ export const AlbumScreen: React.FC = () => {
     return { opacity, transform: [{ translateY }] };
   }, []);
 
-  // 3. Icon color cross-fade
-
-  // Theme/Dark icon fades IN as we scroll UP past threshold
   const iconThemeAnimatedStyle = useAnimatedStyle(() => {
     'worklet';
     const opacity = interpolate(
@@ -435,157 +436,60 @@ export const AlbumScreen: React.FC = () => {
   }, []);
 
   // ============================================================================
-  // MEMOIZED CALLBACKS
-  // ============================================================================
-
-  // ============================================================================
   // HOOKS & STATE
   // ============================================================================
 
   const { playQueue, setShuffleMode, shuffleMode, currentTrack, isPlaying, togglePlayPause } = usePlayer();
-  const { isLiked, toggleLikeAlbum } = useLibraryStore();
+  const { isLiked, toggleLikeArtist } = useLibraryStore();
 
-  const isAlbumLiked = isLiked(albumId, 'album');
+  const isArtistLiked = isLiked(artistId, 'artist');
 
-  // Robust check: Is the currently playing track part of this album?
-  // We use allSongs derived from the album data.
-  const allSongs = useMemo(() => album?.songs || album?.list || [], [album]);
+  const isCurrentArtistContext = useMemo(() => {
+    if (!currentTrack || !topSongs.length) return false;
+    return topSongs.some((s: any) => s.id === currentTrack.id);
+  }, [currentTrack, topSongs]);
 
-  const isCurrentAlbumContext = useMemo(() => {
-    if (!currentTrack || !allSongs.length) return false;
-    return allSongs.some((s: any) => s.id === currentTrack.id);
-  }, [currentTrack, allSongs]);
+  // ============================================================================
+  // CALLBACKS
+  // ============================================================================
 
   const toggleShuffle = useCallback(() => {
     setShuffleMode(!shuffleMode);
   }, [shuffleMode, setShuffleMode]);
 
   const toggleFavorite = useCallback(() => {
-    if (album) {
-      toggleLikeAlbum({
-        id: album.id,
-        type: 'album',
-        title: album.title || album.name,
-        image: imageUrl, // Use the resolved image URL
-        subtitle: album.subtitle || album.artist || album.description,
+    if (artist) {
+      toggleLikeArtist({
+        id: artist.id,
+        type: 'artist',
+        title: artist.name,
+        image: imageUrl,
+        subtitle: artist.subtitle || '',
         timestamp: Date.now(),
-        provider: provider,
+        provider: 'saavn',
       });
     }
-  }, [album, imageUrl, toggleLikeAlbum, provider]);
+  }, [artist, imageUrl, toggleLikeArtist]);
 
-  const handlePlaySong = useCallback((song: Song) => {
-    console.log('Play song:', song.title);
-
-    // 1. Get all songs as tracks
-    // allSongs is already memoized above
-    const tracks = allSongs.map(mapSongToTrack);
-
-    // 2. Find index of clicked song
-    const index = tracks.findIndex((t: any) => t.id === song.id);
-
-    // 3. Play queue starting from index
-    if (index !== -1) {
-      playQueue(tracks, index);
-    }
-  }, [allSongs, playQueue]);
-
-  const handlePlayAll = useCallback(() => {
-    console.log('Play all songs');
-
-    // If currently playing a song from this album, just toggle play/pause
-    if (isCurrentAlbumContext) {
+  const handlePlayTop = useCallback(() => {
+    if (isCurrentArtistContext) {
       togglePlayPause();
       return;
     }
 
-    if (allSongs.length > 0) {
-      const tracks = allSongs.map(mapSongToTrack);
+    if (topSongs.length > 0) {
+      const tracks = topSongs.map(mapSongToTrack);
       playQueue(tracks, 0);
     }
-  }, [allSongs, playQueue, isCurrentAlbumContext, togglePlayPause]);
+  }, [topSongs, playQueue, isCurrentArtistContext, togglePlayPause]);
 
   const handleBack = useCallback(() => {
     stateNavigator.navigateBack(1);
   }, [stateNavigator]);
 
   // ============================================================================
-  // UNIFIED DATA SOURCE
+  // RENDER
   // ============================================================================
-
-  type ListItem = { type: 'song'; data: Song; id: string };
-
-  const listData = useMemo(() => {
-    return allSongs.map((song: Song) => ({
-      type: 'song' as const,
-      data: song,
-      id: song.id,
-    }));
-  }, [allSongs]);
-
-  // ============================================================================
-  // RENDER FUNCTIONS
-  // ============================================================================
-
-  const renderItem = useCallback(
-    ({ item, index }: { item: ListItem; index: number }) => {
-      if (item.type === 'song') {
-        const isCurrent = currentTrack?.id === item.id;
-        return (
-          <SongListItem
-            song={item.data}
-            index={index}
-            isPlaying={isCurrent}
-            isActive={isPlaying}
-            onPress={() => handlePlaySong(item.data)}
-          />
-        );
-      }
-      return null;
-    },
-    [handlePlaySong, currentTrack?.id, isPlaying]
-  );
-
-  const keyExtractor = useCallback((item: ListItem) => item.id, []);
-
-  // Memoized header
-  const listHeader = useMemo(
-    () => (
-      <AlbumHeader
-        album={album}
-        imageUrl={imageUrl}
-        artworkAnimatedStyle={artworkAnimatedStyle}
-        colors={colors}
-        styles={styles}
-        handlePlayAll={handlePlayAll}
-        isLiked={isAlbumLiked}
-        toggleLike={toggleFavorite}
-        shuffleMode={shuffleMode}
-        toggleShuffle={toggleShuffle}
-        isPlaying={isPlaying}
-        isCurrentAlbumContext={isCurrentAlbumContext}
-      />
-    ),
-    [album, imageUrl, artworkAnimatedStyle, colors, styles, handlePlayAll, isAlbumLiked, toggleFavorite, shuffleMode, toggleShuffle, isPlaying, isCurrentAlbumContext]
-  );
-
-  // Memoized footer
-  const listFooter = useMemo(() => {
-    if (!sections || sections.length === 0) return null;
-    return (
-      <View style={{ paddingBottom: s.mScale(spacing.lg) }}>
-        {sections.map((section: any, index: number) => (
-          <View key={index} style={styles.sectionsContainer}>
-            <HomeSection title={section.heading || 'Related'} data={section.data} />
-          </View>
-        ))}
-      </View>
-    );
-  }, [sections, styles, s]);
-
-  // ============================================================================
-  // LOADING &  /* Restore insets */
-  const insets = useSafeAreaInsets();
 
   if (isLoading) {
     return (
@@ -597,25 +501,36 @@ export const AlbumScreen: React.FC = () => {
     );
   }
 
-  if (error || !albumData?.data || !albumId) {
+  if (error || !artistData?.data || !artistId) {
     return (
       <SafeView style={styles.container} applyTopInset={false}>
         <View style={styles.loader}>
           <Text variant="body" center color="secondary">
-            {!albumId ? 'Album not found' : 'Failed to load album'}
+            {!artistId ? 'Artist not found' : 'Failed to load artist'}
           </Text>
         </View>
       </SafeView>
     );
   }
 
-  // ============================================================================
-  // RENDER
-  // ============================================================================
+  // Parse bio text if it's JSON
+  let bioText = '';
+  if (artist?.bio) {
+    try {
+      const bioData = typeof artist.bio === 'string' ? JSON.parse(artist.bio) : artist.bio;
+      if (Array.isArray(bioData) && bioData[0]?.text) {
+        bioText = bioData[0].text;
+      } else if (typeof bioData === 'string') {
+        bioText = bioData;
+      }
+    } catch {
+      bioText = artist.bio;
+    }
+  }
 
   return (
     <SafeView style={styles.container} applyTopInset={false}>
-      {/* Sticky Header Container (Transparent, stuck to top) */}
+      {/* Sticky Header */}
       <Animated.View
         style={[
           styles.stickyHeader,
@@ -623,11 +538,11 @@ export const AlbumScreen: React.FC = () => {
             height: s.mScale(60) + insets.top,
             paddingTop: insets.top,
             backgroundColor: 'transparent',
-            borderBottomWidth: 0, // Remove static border
+            borderBottomWidth: 0,
           },
         ]}
       >
-        {/* 1. Animated Background Layer (Fades In) */}
+        {/* Background */}
         <Animated.View
           style={[
             {
@@ -640,9 +555,8 @@ export const AlbumScreen: React.FC = () => {
           ]}
         />
 
-        {/* 2. Back Button (Persistent) */}
+        {/* Back Button */}
         <Pressable onPress={handleBack} style={styles.headerButton} hitSlop={8}>
-          {/* Theme Icon (Scrolled) */}
           <Animated.View
             style={[
               StyleSheet.absoluteFill,
@@ -654,20 +568,19 @@ export const AlbumScreen: React.FC = () => {
           </Animated.View>
         </Pressable>
 
-        {/* 3. Title (Fades In) */}
+        {/* Title */}
         <Animated.View style={[{ flex: 1 }, headerTitleAnimatedStyle]}>
           <Text variant="body" style={{ fontWeight: '600', textAlign: 'center' }} numberOfLines={1}>
-            {decodeHtmlEntities(album?.title || '')}
+            {decodeHtmlEntities(artist?.name || '')}
           </Text>
         </Animated.View>
 
-        {/* 4. Menu Button (Persistent) */}
+        {/* Menu Button */}
         <Pressable
           onPress={() => console.log('Menu pressed')}
           style={styles.headerButton}
           hitSlop={8}
         >
-          {/* Theme Icon (Scrolled) */}
           <Animated.View
             style={[
               StyleSheet.absoluteFill,
@@ -680,24 +593,47 @@ export const AlbumScreen: React.FC = () => {
         </Pressable>
       </Animated.View>
 
-      {/* Optimized List */}
-      <AnimatedLegendList
-        data={listData}
-        extraData={currentTrack?.id}
-        renderItem={renderItem}
-        keyExtractor={keyExtractor}
+      {/* Scrollable Content */}
+      <AnimatedScrollView
         onScroll={scrollHandler}
-        estimatedItemSize={s.mScale(60)}
-        drawDistance={s.vScale(1000)}
-        scrollEventThrottle={32}
-        ListHeaderComponent={listHeader}
-        ListFooterComponent={listFooter}
-        recycleItems={true}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
-      />
+        contentContainerStyle={{ paddingBottom: 100 }}
+      >
+        {/* Artist Header */}
+        <ArtistHeader
+          artist={artist}
+          imageUrl={imageUrl}
+          artworkAnimatedStyle={artworkAnimatedStyle}
+          colors={colors}
+          styles={styles}
+          handlePlayTop={handlePlayTop}
+          isLiked={isArtistLiked}
+          toggleLike={toggleFavorite}
+          shuffleMode={shuffleMode}
+          toggleShuffle={toggleShuffle}
+          isPlaying={isPlaying}
+          isCurrentArtistContext={isCurrentArtistContext}
+        />
+
+        {/* Bio Section */}
+        {bioText && (
+          <View style={styles.bioContainer}>
+            <Text variant="body" color="secondary" numberOfLines={4} style={styles.bioText}>
+              {decodeHtmlEntities(bioText)}
+            </Text>
+          </View>
+        )}
+
+        {/* Sections */}
+        {sections.map((section: any, index: number) => (
+          <View key={index} style={styles.sectionsContainer}>
+            <HomeSection title={section.heading || 'Related'} data={section.data} />
+          </View>
+        ))}
+      </AnimatedScrollView>
     </SafeView>
   );
 };
 
-export default AlbumScreen;
+export default ArtistScreen;

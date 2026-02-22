@@ -10,7 +10,6 @@ import TurboImage from 'react-native-turbo-image';
 
 import { borderRadius, springs, ThemeColors } from '../../theme';
 import { useTheme } from '../../theme/ThemeContext';
-import { useScalingDebug } from '../../utils/debug.scaling';
 import { makeScalingStyles, useScalingStyles } from '../../utils/style.util';
 import { MusicNote } from './SolarIcons.generated';
 import { Text } from './Text';
@@ -84,56 +83,8 @@ export const MediaCard: React.FC<MediaCardProps> = memo(({
 
   // ✅ FIXED: Calculate scaled size once
   const scaledSize = s.mScale(size);
-  const debug = useScalingDebug('MediaCard');
-  const containerRef = React.useRef<View>(null);
 
-  React.useEffect(() => {
-    debug('Render', {
-      props: {
-        title: title.slice(0, 20) + '...',
-        size,
-        variant,
-      },
-      computed: {
-        scaledSize,
-        'imageContainer width': '100%',
-        'imageContainer height': '100%',
-        'imageWrapper explicit width': s.mScale(size),
-        'imageWrapper explicit height': s.mScale(size),
-      },
-      calculations: {
-        'Input size': size,
-        'mScale(size)': s.mScale(size),
-        'scale(size)': s.scale(size),
-        'vScale(size)': s.vScale(size),
-        'Difference (mScale - input)': s.mScale(size) - size,
-        'Ratio (mScale/input)': (s.mScale(size) / size).toFixed(3),
-        'Expected on POCO (~150px)': s.mScale(144),
-      },
-      styles: {
-        'container.gap': styles.container.gap,
-        'imageContainer.backgroundColor': styles.imageContainer.backgroundColor,
-        'textContainer.gap': styles.textContainer.gap,
-        'textContainer.marginTop': styles.textContainer.marginTop,
-      },
-    });
-  }, [size, scaledSize, debug, s, styles, title, variant]);
 
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      containerRef.current?.measure((x, y, width, height, pageX, pageY) => {
-        console.log('🎯 ACTUAL RENDERED SIZE:', {
-          title: title.slice(0, 20),
-          expectedWidth: scaledSize,
-          actualWidth: width,  // ← This is the rendered width!
-          actualHeight: height,
-          difference: width - scaledSize,
-        });
-      });
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [scaledSize, title]);
 
   return (
     <Animated.View style={[styles.container, { width: scaledSize }, style]}>

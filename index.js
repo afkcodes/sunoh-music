@@ -15,11 +15,11 @@ import { debugLogger } from './src/utils/debugLogger';
 // ---------------------------------------------------------------------------
 AudioPro.configure({
   progressIntervalMs: 1000,
-  debug: __DEV__,
+  debug: false,
   contentType: AudioProContentType.MUSIC,
   cacheEnabled: true,
   maxCacheSize: 2048 * 1024 * 1024,
-  
+  castEnabled: false,
 });
 
 debugLogger.log('SYSTEM', 'AudioPro Configured');
@@ -70,5 +70,12 @@ AppRegistry.registerComponent(appName, () => App);
 // Start persistence listener
 audioService.startPersistence();
 
+// // Sync initial Cast state — discovery may fire before JS listener is ready
+// AudioPro.getCastState().then(({ castState }) => {
+//   const { usePlayerStore } = require('./src/store/usePlayerStore');
+//   usePlayerStore.getState().setCastState(castState);
+// }).catch(() => {});
+
 // Initialize URL refresh logic for expired stream URLs (Gaana)
 urlRefreshLogic.initialize();
+

@@ -34,6 +34,8 @@ export function useArtworkTheme(artworkUrl?: string) {
   if (prevUrlRef.current !== artworkUrl) {
     prevUrlRef.current = artworkUrl;
     if (cached) {
+      console.log(cached);
+
       setPlayerTheme(cached.playerTheme);
       setGradientColors(cached.gradientColors);
     } else {
@@ -57,7 +59,7 @@ export function useArtworkTheme(artworkUrl?: string) {
           console.log(palette);
 
 
-          const seedColor = palette.darkVibrant || palette.vibrant || colors.primaryBase;
+          const seedColor = palette.dominantAndroid || palette.darkVibrant || colors.primaryBase;
           const tonal = generateTonalPalette(seedColor);
           const mTheme = generateThemeColors(tonal, true);
           const gColors = [tonal[20], tonal[10]];
@@ -88,3 +90,5 @@ export function useArtworkTheme(artworkUrl?: string) {
 
   return { playerTheme, gradientColors };
 }
+
+

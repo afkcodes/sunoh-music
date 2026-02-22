@@ -17,7 +17,7 @@ export const MUSIC_LANGUAGES = `${baseURL}/music/languages`;
 export const MUSIC_RADIO_BROWSE = `${baseURL}/music/radio`;
 export const MUSIC_RADIO_DETAIL = (radioId: string) => `${baseURL}/music/radio/${radioId}`;
 export const MUSIC_ARTIST_RADIO = (artistId: string) => `${baseURL}/music/artist/${artistId}/radio`;
-export const MUSIC_RECOMMEND = (id: string) => `${baseURL}/music/recommend?songId=${id}`;
+export const MUSIC_RECOMMEND = (id: string) => `${baseURL}/music/song/${id}/recommend`;
 export const MUSIC_RECOMMEND_SEARCH = (query: string) => `${baseURL}/music/recommend?q=${query}`;
 export const MUSIC_RADIO_SESSION = `${baseURL}/music/radio/session`;
 export const MUSIC_RADIO_PLAY = (sessionId: string) => `${baseURL}/music/radio/${sessionId}`;

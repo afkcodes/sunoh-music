@@ -1,6 +1,7 @@
 import React, { forwardRef, useCallback, useImperativeHandle, useMemo } from 'react';
-import { Dimensions, Pressable, ScrollView, View } from 'react-native';
+import { Dimensions, Pressable, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated, { useAnimatedRef } from 'react-native-reanimated';
 import Sortable, { SortableFlexDragEndParams } from 'react-native-sortables';
 import { usePlayer } from '../../store/usePlayerStore';
 import { useTheme } from '../../theme/ThemeContext';
@@ -85,7 +86,7 @@ export const QueueSheet = forwardRef<SheetRef, {}>((_, ref) => {
   const styles = useScalingStyles(createStyles, theme);
   const { queue, currentTrack, skipToTrack, isPlaying, reorder } = usePlayer();
   const sheetRef = React.useRef<SheetRef>(null);
-  const scrollRef = React.useRef<ScrollView>(null);
+  const scrollRef = useAnimatedRef<Animated.ScrollView>();
 
   useImperativeHandle(ref, () => ({
     present: () => sheetRef.current?.present(),
@@ -129,11 +130,14 @@ export const QueueSheet = forwardRef<SheetRef, {}>((_, ref) => {
             <Text style={styles.doneText}>Done</Text>
           </Pressable>
         </View>
-        <ScrollView
+        <Animated.ScrollView
           ref={scrollRef}
           style={styles.scrollView}
           contentContainerStyle={{ paddingBottom: 32 }}
           nestedScrollEnabled
+          renderToHardwareTextureAndroid
+          removeClippedSubviews
+          showsVerticalScrollIndicator={false}
         >
           <Sortable.Flex
             onDragEnd={handleDragEnd}
@@ -148,10 +152,13 @@ export const QueueSheet = forwardRef<SheetRef, {}>((_, ref) => {
             inactiveItemScale={1}
             dragActivationDelay={200}
             dropAnimationDuration={250}
+            autoScrollDirection="vertical"
+            autoScrollEnabled
+            scrollableRef={scrollRef}
           >
             {queueItems}
           </Sortable.Flex>
-        </ScrollView>
+        </Animated.ScrollView>
       </GestureHandlerRootView>
     </Sheet>
   );

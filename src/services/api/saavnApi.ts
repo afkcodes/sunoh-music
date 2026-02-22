@@ -96,9 +96,9 @@ export const saavnApi = {
     }
   },
 
-  fetchArtistDetails: async (artistId: string, provider: MusicProvider = 'saavn'): Promise<any> => {
+  fetchArtistDetails: async (artistId: string): Promise<any> => {
     try {
-      const url = `${MUSIC_ARTIST(artistId)}?provider=${encodeURIComponent(provider)}`;
+      const url = MUSIC_ARTIST(artistId);
 
       const response = await fetch(url);
       if (!response.ok) {
@@ -129,18 +129,57 @@ export const saavnApi = {
   search: async (
     query: string,
     languages: string = 'hindi,english',
-    provider: MusicProvider = 'saavn'
+    provider: MusicProvider = 'saavn',
+    type: 'songs' | 'albums' | 'artists' | 'playlists' | 'all' = 'songs'
   ): Promise<any> => {
     try {
-      const url = `${MUSIC_SEARCH}?query=${encodeURIComponent(query)}&lang=${encodeURIComponent(
+      // Backend expects 'q' not 'query' for the search parameter
+      // type=songs returns full song data including artists; unified search truncates it
+      const url = `${MUSIC_SEARCH}?q=${encodeURIComponent(query)}&lang=${encodeURIComponent(
         languages
-      )}&provider=${encodeURIComponent(provider)}`;
+      )}&provider=${encodeURIComponent(provider)}&type=${type}`;
+
+      console.log(`🔍 saavnApi.search: URL = ${url}`);
 
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`API Error: ${response.status}`);
       }
-      return await response.json();
+      const data = await response.json();
+      
+      // For 'all' type (unified search), return original structure
+      // SearchScreen expects data to be an array of sections
+      if (type === 'all') {
+        console.log(`📦 saavnApi.search: Unified search, returning ${Array.isArray(data.data) ? data.data.length : 0} sections`);
+        return data;
+      }
+      
+      // For songs type, normalize to {data: {list: songs[]}} format
+      // This is used by auto-queue for Gaana→Saavn pivot
+      let songsList: any[] = [];
+      if (data.data?.list) {
+        // Already in expected format (from type=songs endpoint)
+        songsList = data.data.list;
+      } else if (Array.isArray(data.data)) {
+        // Fallback: extract from sections
+        const songsSection = data.data.find((section: any) => 
+          section.heading?.toLowerCase() === 'songs' || section.heading?.toLowerCase() === 'topquery'
+        );
+        if (songsSection?.data) {
+          songsList = songsSection.data;
+        }
+      }
+      
+      console.log(`📦 saavnApi.search: Response status=${data.status}, songs found=${songsList.length}`);
+      
+      // Return normalized format for consumers
+      return {
+        ...data,
+        data: {
+          ...data.data,
+          list: songsList
+        }
+      };
     } catch (error) {
       console.error('Failed to search:', error);
       throw error;

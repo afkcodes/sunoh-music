@@ -3,7 +3,7 @@ import { mmkv } from './storage';
 
 export interface LibraryItem {
   id: string;
-  type: 'song' | 'album' | 'playlist';
+  type: 'song' | 'album' | 'playlist' | 'artist';
   title: string;
   image?: string;
   subtitle?: string;
@@ -17,17 +17,20 @@ interface LibraryState {
   likedSongs: LibraryItem[];
   likedAlbums: LibraryItem[];
   likedPlaylists: LibraryItem[];
+  likedArtists: LibraryItem[];
 
   // Actions
   toggleLikeSong: (item: LibraryItem) => void;
   toggleLikeAlbum: (item: LibraryItem) => void;
   toggleLikePlaylist: (item: LibraryItem) => void;
-  isLiked: (id: string, type: 'song' | 'album' | 'playlist') => boolean;
+  toggleLikeArtist: (item: LibraryItem) => void;
+  isLiked: (id: string, type: 'song' | 'album' | 'playlist' | 'artist') => boolean;
 }
 
 const STORAGE_KEYS = {
   LIKED_SONGS: 'library_liked_songs',
   LIKED_ALBUMS: 'library_liked_albums',
+  LIKED_ARTISTS: 'library_liked_artists',
 };
 
 const getPersistedData = (key: string): LibraryItem[] => {
@@ -44,6 +47,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   likedSongs: getPersistedData(STORAGE_KEYS.LIKED_SONGS),
   likedAlbums: getPersistedData(STORAGE_KEYS.LIKED_ALBUMS),
   likedPlaylists: getPersistedData('library_liked_playlists'),
+  likedArtists: getPersistedData(STORAGE_KEYS.LIKED_ARTISTS),
 
   toggleLikeSong: (item: LibraryItem) => {
     const { likedSongs } = get();
@@ -81,11 +85,24 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     mmkv.set('library_liked_playlists', JSON.stringify(newItems));
   },
 
-  isLiked: (id: string, type: 'song' | 'album' | 'playlist') => {
-    const { likedSongs, likedAlbums, likedPlaylists } = get();
+  toggleLikeArtist: (item: LibraryItem) => {
+    const { likedArtists } = get();
+    let newItems;
+    if (likedArtists.some(i => i.id === item.id)) {
+      newItems = likedArtists.filter(i => i.id !== item.id);
+    } else {
+      newItems = [{ ...item, timestamp: Date.now() }, ...likedArtists];
+    }
+    set({ likedArtists: newItems });
+    mmkv.set(STORAGE_KEYS.LIKED_ARTISTS, JSON.stringify(newItems));
+  },
+
+  isLiked: (id: string, type: 'song' | 'album' | 'playlist' | 'artist') => {
+    const { likedSongs, likedAlbums, likedPlaylists, likedArtists } = get();
     if (type === 'song') return likedSongs.some(i => i.id === id);
     if (type === 'album') return likedAlbums.some(i => i.id === id);
     if (type === 'playlist') return likedPlaylists?.some(i => i.id === id) ?? false;
+    if (type === 'artist') return likedArtists?.some(i => i.id === id) ?? false;
     return false;
   },
 }));
