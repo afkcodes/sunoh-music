@@ -74,8 +74,18 @@ export const useMediaNavigation = () => {
         });
         break;
 
-      case 'radio_station':
+      case 'occasion':
       case 'channel':
+        console.log('📂 MediaNav: Navigating to channel/occasion details', { title: props.title, id: props.id });
+        stateNavigator.navigate(Routes.SectionDetail, {
+          sectionId: props.id, // token/id of the channel
+          title: props.title,
+          provider: props.provider,
+          isOccasion: true,
+        });
+        break;
+
+      case 'radio_station':
         console.log('📻 MediaNav: Starting unified radio session', { title: props.title, id: props.id, type: props.type, provider: props.provider });
         try {
           const { setIsFetching, setRadio, playQueue } = usePlayerStore.getState();
@@ -85,7 +95,7 @@ export const useMediaNavigation = () => {
           // Map internal types to API types if necessary
           let radioType = 'song'; // default
           if (props.stationType === 'artist') radioType = 'artist';
-          if (props.stationType === 'featured' || props.type === 'channel') radioType = 'featured';
+          if (props.stationType === 'featured') radioType = 'featured';
 
           const sessionData = await saavnApi.initRadioSession(
             props.id,
