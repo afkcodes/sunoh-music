@@ -58,6 +58,13 @@ const trackScreen = (_oldState: any, state: any) => {
   }
 };
 
+// Remove listeners to prevent "Cannot add the same handler more than once" during Fast Refresh
+rootNavigator.offNavigate(trackScreen);
+homeNavigator.offNavigate(trackScreen);
+libraryNavigator.offNavigate(trackScreen);
+searchNavigator.offNavigate(trackScreen);
+
+// Add listeners
 rootNavigator.onNavigate(trackScreen);
 homeNavigator.onNavigate(trackScreen);
 libraryNavigator.onNavigate(trackScreen);
