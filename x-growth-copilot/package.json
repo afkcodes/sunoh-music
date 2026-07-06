@@ -1,0 +1,17 @@
+{
+  "name": "x-growth-copilot",
+  "version": "0.1.0",
+  "description": "Score and rewrite X posts against the open-sourced For You algorithm's prediction heads. Driven by Claude Code via the tweet-optimizer skill — no API key needed.",
+  "type": "module",
+  "scripts": {
+    "analyze": "tsx src/cli.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
